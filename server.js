@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos con MIME types correctos
+// Servir archivos estáticos
 app.use(express.static('public', {
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.css')) {
@@ -36,7 +36,7 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Verificar conexión a la base de datos
+// Verificar conexión
 pool.getConnection()
     .then(connection => {
         console.log('✅ Conexión a la base de datos exitosa');
@@ -66,7 +66,6 @@ const authenticateToken = (req, res, next) => {
 
 // ==================== RUTAS DE AUTENTICACIÓN ====================
 
-// Registro de usuario
 app.post('/api/auth/register', async (req, res) => {
     const { username, password } = req.body;
 
@@ -102,7 +101,6 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -148,14 +146,12 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// Verificar token
 app.get('/api/auth/verify', authenticateToken, (req, res) => {
     res.json({ valid: true, user: req.user });
 });
 
 // ==================== RUTAS DE CATÁLOGO DE CUENTAS ====================
 
-// Obtener todas las cuentas
 app.get('/api/cuentas', authenticateToken, async (req, res) => {
     try {
         const [cuentas] = await pool.query(
@@ -170,7 +166,6 @@ app.get('/api/cuentas', authenticateToken, async (req, res) => {
 
 // ==================== RUTAS DE LIBRO DIARIO ====================
 
-// Crear nuevo asiento
 app.post('/api/asientos', authenticateToken, async (req, res) => {
     const { fecha, concepto, movimientos } = req.body;
 
@@ -190,18 +185,21 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
     try {
         await connection.beginTransaction();
 
+        // Obtener el siguiente número de movimiento
         const [result] = await connection.query(
-            'SELECT COALESCE(MAX(numero_asiento), 0) + 1 as siguiente FROM libro_diario'
+            'SELECT COALESCE(MAX(numero_movimiento), 0) + 1 as siguiente FROM libro_diario'
         );
-        const numeroAsiento = result[0].siguiente;
+        const numeroMovimiento = result[0].siguiente;
 
+        // Insertar en libro_diario
         const [asientoResult] = await connection.query(
-            'INSERT INTO libro_diario (numero_asiento, fecha, concepto, usuario_id) VALUES (?, ?, ?, ?)',
-            [numeroAsiento, fecha, concepto, req.user.id]
+            'INSERT INTO libro_diario (numero_movimiento, fecha, concepto, usuario_id) VALUES (?, ?, ?, ?)',
+            [numeroMovimiento, fecha, concepto, req.user.id]
         );
 
         const asientoId = asientoResult.insertId;
 
+        // Insertar movimientos
         for (const mov of movimientos) {
             await connection.query(
                 'INSERT INTO movimientos (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, ?)',
@@ -210,9 +208,10 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
         }
 
         await connection.commit();
+        console.log('✅ Asiento creado:', numeroMovimiento);
         res.status(201).json({ 
             message: 'Asiento creado exitosamente', 
-            numero_asiento: numeroAsiento,
+            numero_movimiento: numeroMovimiento,
             id: asientoId
         });
     } catch (error) {
@@ -224,13 +223,12 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
     }
 });
 
-// Obtener todos los asientos (Libro Diario)
 app.get('/api/asientos', authenticateToken, async (req, res) => {
     try {
         const [asientos] = await pool.query(`
             SELECT 
                 ld.id,
-                ld.numero_asiento,
+                ld.numero_movimiento,
                 ld.fecha,
                 ld.concepto,
                 GROUP_CONCAT(
@@ -242,7 +240,7 @@ app.get('/api/asientos', authenticateToken, async (req, res) => {
             LEFT JOIN movimientos m ON ld.id = m.asiento_id
             LEFT JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
             GROUP BY ld.id
-            ORDER BY ld.numero_asiento DESC
+            ORDER BY ld.numero_movimiento DESC
         `);
 
         const asientosFormateados = asientos.map(asiento => {
@@ -259,7 +257,7 @@ app.get('/api/asientos', authenticateToken, async (req, res) => {
             }
             return {
                 id: asiento.id,
-                numero_asiento: asiento.numero_asiento,
+                numero_asiento: asiento.numero_movimiento,
                 fecha: asiento.fecha,
                 concepto: asiento.concepto,
                 movimientos
@@ -497,17 +495,14 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
 
 // ==================== RUTAS DE ARCHIVOS HTML ====================
 
-// Ruta raíz - Login
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Registro
 app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
-// Panel (después de login)
 app.get('/panel', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'panel.html'));
 });

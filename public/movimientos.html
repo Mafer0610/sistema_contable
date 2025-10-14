@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Movimiento - Sistema Contable</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Sistema Contable</h1>
+                <div class="user-info">
+                    <span id="username">Usuario</span>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <a href="panel.html" class="nav-btn">Inicio</a>
+            <a href="movimientos.html" class="nav-btn active">Agregar Movimiento</a>
+            <a href="diario.html" class="nav-btn">Libro Diario</a>
+            <a href="mayor.html" class="nav-btn">Libro Mayor</a>
+            <a href="balanza.html" class="nav-btn">Balanza de Comprobación</a>
+            <a href="balance.html" class="nav-btn">Balance General</a>
+            <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+        </aside>
+
+        <main class="content">
+            <section class="section active">
+                <h2>Agregar Movimiento Contable</h2>
+                <form id="movimientoForm" class="form-movimiento">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fecha">📅 Fecha:</label>
+                            <input type="date" id="fecha" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="concepto">📝 Concepto:</label>
+                            <input type="text" id="concepto" placeholder="Descripción del movimiento" required>
+                        </div>
+                    </div>
+
+                    <div class="movimientos-container">
+                        <h3>Movimientos</h3>
+                        <div id="movimientosList"></div>
+                        <button type="button" class="btn-add" onclick="agregarLineaMovimiento()">+ Agregar Línea</button>
+                    </div>
+
+                    <div class="form-totales">
+                        <div class="total-item">
+                            <label>Total Debe:</label>
+                            <span id="totalDebe">0.00</span>
+                        </div>
+                        <div class="total-item">
+                            <label>Total Haber:</label>
+                            <span id="totalHaber">0.00</span>
+                        </div>
+                        <div class="total-item diferencia">
+                            <label>Diferencia:</label>
+                            <span id="diferencia">0.00</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let cuentas = [];
+
+        // Verificar autenticación
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Token inválido');
+
+                const userData = JSON.parse(localStorage.getItem('user_data'));
+                document.getElementById('username').textContent = userData.username;
+
+                await cargarCuentas();
+                agregarLineaMovimiento();
+                setFechaActual();
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+            }
+        });
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/';
+        }
+
+        async function cargarCuentas() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/cuentas`);
+                cuentas = await response.json();
+            } catch (error) {
+                console.error('Error al cargar cuentas:', error);
+                alert('Error al cargar el catálogo de cuentas');
+            }
+        }
+
+        function setFechaActual() {
+            const fecha = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha').value = fecha;
+        }
+
+        function agregarLineaMovimiento() {
+            const container = document.getElementById('movimientosList');
+            const linea = document.createElement('div');
+            linea.className = 'movimiento-linea';
+            
+            linea.innerHTML = `
+                <select class="cuenta-select" required>
+                    <option value="">Selecciona una cuenta...</option>
+                    ${cuentas.map(c => `<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('')}
+                </select>
+                <input type="number" class="debe-input" placeholder="Debe" step="0.01" min="0" value="0">
+                <input type="number" class="haber-input" placeholder="Haber" step="0.01" min="0" value="0">
+                <button type="button" class="btn-remove" onclick="eliminarLinea(this)">✖</button>
+            `;
+            
+            container.appendChild(linea);
+            linea.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', calcularTotales);
+            });
+        }
+
+        function eliminarLinea(button) {
+            const container = document.getElementById('movimientosList');
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+                calcularTotales();
+            } else {
+                alert('Debe haber al menos una línea de movimiento');
+            }
+        }
+
+        function calcularTotales() {
+            const lineas = document.querySelectorAll('.movimiento-linea');
+            let totalDebe = 0;
+            let totalHaber = 0;
+
+            lineas.forEach(linea => {
+                const debe = parseFloat(linea.querySelector('.debe-input').value) || 0;
+                const haber = parseFloat(linea.querySelector('.haber-input').value) || 0;
+                totalDebe += debe;
+                totalHaber += haber;
+            });
+
+            document.getElementById('totalDebe').textContent = totalDebe.toFixed(2);
+            document.getElementById('totalHaber').textContent = totalHaber.toFixed(2);
+            
+            const diferencia = Math.abs(totalDebe - totalHaber);
+            document.getElementById('diferencia').textContent = diferencia.toFixed(2);
+            document.getElementById('diferencia').style.color = diferencia < 0.01 ? '#4caf50' : '#f44336';
+        }
+
+        document.getElementById('movimientoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const fecha = document.getElementById('fecha').value;
+            const concepto = document.getElementById('concepto').value;
+            const lineas = document.querySelectorAll('.movimiento-linea');
+            
+            const movimientos = [];
+            let valid = true;
+
+            lineas.forEach(linea => {
+                const cuentaId = linea.querySelector('.cuenta-select').value;
+                const debe = parseFloat(linea.querySelector('.debe-input').value) || 0;
+                const haber = parseFloat(linea.querySelector('.haber-input').value) || 0;
+
+                if (!cuentaId) {
+                    valid = false;
+                    return;
+                }
+
+                if (debe > 0 || haber > 0) {
+                    movimientos.push({ cuenta_id: cuentaId, debe, haber });
+                }
+            });
+
+            if (!valid) {
+                alert('Por favor selecciona todas las cuentas');
+                return;
+            }
+
+            if (movimientos.length === 0) {
+                alert('Debes agregar al menos un movimiento con monto');
+                return;
+            }
+
+            const totalDebe = movimientos.reduce((sum, m) => sum + m.debe, 0);
+            const totalHaber = movimientos.reduce((sum, m) => sum + m.haber, 0);
+
+            if (Math.abs(totalDebe - totalHaber) > 0.01) {
+                alert('El debe y el haber deben ser iguales');
+                return;
+            }
+
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/asientos`, {
+                    method: 'POST',
+                    body: JSON.stringify({ fecha, concepto, movimientos })
+                });
+
+                if (response.ok) {
+                    alert('Guardado exitosamente');
+                    document.getElementById('movimientoForm').reset();
+                    document.getElementById('movimientosList').innerHTML = '';
+                    agregarLineaMovimiento();
+                    setFechaActual();
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error al guardar asiento:', error);
+                alert('Error al guardar el asiento');
+            }
+        });
+    </script>
+</body>
+</html>

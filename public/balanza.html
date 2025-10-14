@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balanza de Comprobación - Sistema Contable</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Sistema Contable</h1>
+                <div class="user-info">
+                    <span id="username">Usuario</span>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <a href="panel.html" class="nav-btn">Inicio</a>
+            <a href="movimientos.html" class="nav-btn">Agregar Movimiento</a>
+            <a href="diario.html" class="nav-btn">Libro Diario</a>
+            <a href="mayor.html" class="nav-btn">Libro Mayor</a>
+            <a href="balanza.html" class="nav-btn active">Balanza de Comprobación</a>
+            <a href="balance.html" class="nav-btn">Balance General</a>
+            <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+        </aside>
+
+        <main class="content">
+            <section class="section active">
+                <h2>Balanza de Comprobación</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cuenta</th>
+                                <th>Debe</th>
+                                <th>Haber</th>
+                                <th>Saldo Deudor</th>
+                                <th>Saldo Acreedor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balanzaBody">
+                            <tr>
+                                <td colspan="5" class="text-center">Cargando...</td>
+                            </tr>
+                        </tbody>
+                        <tfoot id="balanzaFooter"></tfoot>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Token inválido');
+
+                const userData = JSON.parse(localStorage.getItem('user_data'));
+                document.getElementById('username').textContent = userData.username;
+
+                await cargarBalanza();
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+            }
+        });
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/';
+        }
+
+        async function cargarBalanza() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/balanza`);
+                const balanza = await response.json();
+                
+                const tbody = document.getElementById('balanzaBody');
+                const tfoot = document.getElementById('balanzaFooter');
+                tbody.innerHTML = '';
+
+                if (balanza.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay movimientos registrados</td></tr>';
+                    tfoot.innerHTML = '';
+                    return;
+                }
+
+                let totales = {
+                    debe: 0,
+                    haber: 0,
+                    deudor: 0,
+                    acreedor: 0
+                };
+
+                balanza.forEach(cuenta => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${cuenta.nombre}</td>
+                        <td class="text-right">${cuenta.movimientos.debe.toFixed(2)}</td>
+                        <td class="text-right">${cuenta.movimientos.haber.toFixed(2)}</td>
+                        <td class="text-right">${cuenta.saldos.deudor > 0 ? cuenta.saldos.deudor.toFixed(2) : ''}</td>
+                        <td class="text-right">${cuenta.saldos.acreedor > 0 ? cuenta.saldos.acreedor.toFixed(2) : ''}</td>
+                    `;
+
+                    totales.debe += cuenta.movimientos.debe;
+                    totales.haber += cuenta.movimientos.haber;
+                    totales.deudor += cuenta.saldos.deudor;
+                    totales.acreedor += cuenta.saldos.acreedor;
+                });
+
+                tfoot.innerHTML = `
+                    <tr>
+                        <td><strong>SUMA IGUALES</strong></td>
+                        <td class="text-right"><strong>${totales.debe.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>${totales.haber.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>${totales.deudor.toFixed(2)}</strong></td>
+                        <td class="text-right"><strong>${totales.acreedor.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+            } catch (error) {
+                console.error('Error al cargar balanza:', error);
+                document.getElementById('balanzaBody').innerHTML = 
+                    '<tr><td colspan="5" class="text-center" style="color: red;">Error al cargar los datos</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>

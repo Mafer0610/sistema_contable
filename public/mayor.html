@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libro Mayor - Sistema Contable</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Sistema Contable</h1>
+                <div class="user-info">
+                    <span id="username">Usuario</span>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <a href="panel.html" class="nav-btn">Inicio</a>
+            <a href="movimientos.html" class="nav-btn">Agregar Movimiento</a>
+            <a href="diario.html" class="nav-btn">Libro Diario</a>
+            <a href="mayor.html" class="nav-btn active">Libro Mayor</a>
+            <a href="balanza.html" class="nav-btn">Balanza de Comprobación</a>
+            <a href="balance.html" class="nav-btn">Balance General</a>
+            <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+        </aside>
+
+        <main class="content">
+            <section class="section active">
+                <h2>Libro Mayor</h2>
+                <div id="libroMayorContent">
+                    <p class="text-center">Cargando...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Token inválido');
+
+                const userData = JSON.parse(localStorage.getItem('user_data'));
+                document.getElementById('username').textContent = userData.username;
+
+                await cargarLibroMayor();
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+            }
+        });
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/';
+        }
+
+        async function cargarLibroMayor() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/libro-mayor`);
+                const libroMayor = await response.json();
+                
+                const container = document.getElementById('libroMayorContent');
+                container.innerHTML = '';
+
+                if (libroMayor.length === 0) {
+                    container.innerHTML = '<p class="text-center">No hay movimientos registrados</p>';
+                    return;
+                }
+
+                libroMayor.forEach(cuenta => {
+                    const cuentaDiv = document.createElement('div');
+                    cuentaDiv.className = 'cuenta-mayor';
+                    
+                    let htmlMovimientos = '';
+                    cuenta.movimientos.forEach(mov => {
+                        const fecha = new Date(mov.fecha).toLocaleDateString('es-MX');
+                        htmlMovimientos += `
+                            <tr>
+                                <td>${fecha}</td>
+                                <td>${mov.concepto}</td>
+                                <td class="text-right">${mov.debe > 0 ? mov.debe.toFixed(2) : ''}</td>
+                                <td class="text-right">${mov.haber > 0 ? mov.haber.toFixed(2) : ''}</td>
+                                <td class="text-right">${mov.saldo.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    cuentaDiv.innerHTML = `
+                        <div class="cuenta-mayor-header">
+                            ${cuenta.codigo} - ${cuenta.cuenta}
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Concepto</th>
+                                    <th>Debe</th>
+                                    <th>Haber</th>
+                                    <th>Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${htmlMovimientos}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-right"><strong>Saldo Final:</strong></td>
+                                    <td class="text-right"><strong>${cuenta.saldoFinal.toFixed(2)}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    `;
+                    
+                    container.appendChild(cuentaDiv);
+                });
+            } catch (error) {
+                console.error('Error al cargar libro mayor:', error);
+                document.getElementById('libroMayorContent').innerHTML = 
+                    '<p class="text-center" style="color: red;">Error al cargar los datos</p>';
+            }
+        }
+    </script>
+</body>
+</html>

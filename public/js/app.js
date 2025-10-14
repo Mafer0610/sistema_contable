@@ -200,7 +200,7 @@ document.getElementById('movimientoForm').addEventListener('submit', async funct
         });
 
         if (response.ok) {
-            alert('Asiento guardado exitosamente');
+            alert('Guardado exitosamente');
             document.getElementById('movimientoForm').reset();
             document.getElementById('movimientosList').innerHTML = '';
             agregarLineaMovimiento();

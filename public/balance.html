@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance General - Sistema Contable</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Sistema Contable</h1>
+                <div class="user-info">
+                    <span id="username">Usuario</span>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <a href="panel.html" class="nav-btn">Inicio</a>
+            <a href="movimientos.html" class="nav-btn">Agregar Movimiento</a>
+            <a href="diario.html" class="nav-btn">Libro Diario</a>
+            <a href="mayor.html" class="nav-btn">Libro Mayor</a>
+            <a href="balanza.html" class="nav-btn">Balanza de Comprobación</a>
+            <a href="balance.html" class="nav-btn active">Balance General</a>
+            <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+        </aside>
+
+        <main class="content">
+            <section class="section active">
+                <h2>Balance General</h2>
+                <div class="balance-general">
+                    <div class="balance-column">
+                        <h3>ACTIVO</h3>
+                        <div id="activoContent">
+                            <p class="text-center">Cargando...</p>
+                        </div>
+                    </div>
+                    <div class="balance-column">
+                        <h3>PASIVO</h3>
+                        <div id="pasivoContent">
+                            <p class="text-center">Cargando...</p>
+                        </div>
+                        <h3 style="margin-top: 30px;">CAPITAL CONTABLE</h3>
+                        <div id="capitalContent">
+                            <p class="text-center">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Token inválido');
+
+                const userData = JSON.parse(localStorage.getItem('user_data'));
+                document.getElementById('username').textContent = userData.username;
+
+                await cargarBalanceGeneral();
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+            }
+        });
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/';
+        }
+
+        async function cargarBalanceGeneral() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/balance-general`);
+                const balance = await response.json();
+                
+                const activoContent = document.getElementById('activoContent');
+                activoContent.innerHTML = '';
+
+                if (balance.activo.circulante.length > 0) {
+                    const circulanteDiv = document.createElement('div');
+                    circulanteDiv.className = 'balance-seccion';
+                    circulanteDiv.innerHTML = '<h4>Circulante</h4>';
+                    
+                    let totalCirculante = 0;
+                    balance.activo.circulante.forEach(cuenta => {
+                        if (cuenta.saldo > 0) {
+                            const item = document.createElement('div');
+                            item.className = 'balance-item';
+                            item.innerHTML = `
+                                <span>${cuenta.nombre}</span>
+                                <span>${cuenta.saldo.toFixed(2)}</span>
+                            `;
+                            circulanteDiv.appendChild(item);
+                            totalCirculante += cuenta.saldo;
+                        }
+                    });
+
+                    const totalDiv = document.createElement('div');
+                    totalDiv.className = 'balance-total';
+                    totalDiv.innerHTML = `
+                        <span>Total Activo Circulante</span>
+                        <span>${totalCirculante.toFixed(2)}</span>
+                    `;
+                    circulanteDiv.appendChild(totalDiv);
+                    activoContent.appendChild(circulanteDiv);
+                }
+
+                if (balance.activo.no_circulante.length > 0) {
+                    const noCirculanteDiv = document.createElement('div');
+                    noCirculanteDiv.className = 'balance-seccion';
+                    noCirculanteDiv.innerHTML = '<h4>No Circulante</h4>';
+                    
+                    let totalNoCirculante = 0;
+                    balance.activo.no_circulante.forEach(cuenta => {
+                        if (cuenta.saldo !== 0) {
+                            const item = document.createElement('div');
+                            item.className = 'balance-item';
+                            item.innerHTML = `
+                                <span>${cuenta.nombre}</span>
+                                <span>${cuenta.saldo.toFixed(2)}</span>
+                            `;
+                            noCirculanteDiv.appendChild(item);
+                            totalNoCirculante += cuenta.saldo;
+                        }
+                    });
+
+                    const totalDiv = document.createElement('div');
+                    totalDiv.className = 'balance-total';
+                    totalDiv.innerHTML = `
+                        <span>Total Activo No Circulante</span>
+                        <span>${totalNoCirculante.toFixed(2)}</span>
+                    `;
+                    noCirculanteDiv.appendChild(totalDiv);
+                    activoContent.appendChild(noCirculanteDiv);
+                }
+
+                const totalActivoDiv = document.createElement('div');
+                totalActivoDiv.className = 'resultado-total';
+                const totalActivo = balance.activo.circulante.reduce((sum, c) => sum + c.saldo, 0) +
+                                   balance.activo.no_circulante.reduce((sum, c) => sum + c.saldo, 0);
+                totalActivoDiv.innerHTML = `
+                    <span>TOTAL DE ACTIVO</span>
+                    <span>${totalActivo.toFixed(2)}</span>
+                `;
+                activoContent.appendChild(totalActivoDiv);
+
+                const pasivoContent = document.getElementById('pasivoContent');
+                pasivoContent.innerHTML = '';
+
+                if (balance.pasivo.corto_plazo.length > 0) {
+                    const cortoPlazoDiv = document.createElement('div');
+                    cortoPlazoDiv.className = 'balance-seccion';
+                    cortoPlazoDiv.innerHTML = '<h4>Corto Plazo</h4>';
+                    
+                    let totalCortoPlazo = 0;
+                    balance.pasivo.corto_plazo.forEach(cuenta => {
+                        if (cuenta.saldo > 0) {
+                            const item = document.createElement('div');
+                            item.className = 'balance-item';
+                            item.innerHTML = `
+                                <span>${cuenta.nombre}</span>
+                                <span>${cuenta.saldo.toFixed(2)}</span>
+                            `;
+                            cortoPlazoDiv.appendChild(item);
+                            totalCortoPlazo += cuenta.saldo;
+                        }
+                    });
+
+                    const totalDiv = document.createElement('div');
+                    totalDiv.className = 'balance-total';
+                    totalDiv.innerHTML = `
+                        <span>Total de Pasivo</span>
+                        <span>${totalCortoPlazo.toFixed(2)}</span>
+                    `;
+                    cortoPlazoDiv.appendChild(totalDiv);
+                    pasivoContent.appendChild(cortoPlazoDiv);
+                }
+
+                if (pasivoContent.innerHTML === '') {
+                    pasivoContent.innerHTML = '<p class="text-center">No hay pasivos registrados</p>';
+                }
+
+                const capitalContent = document.getElementById('capitalContent');
+                capitalContent.innerHTML = '';
+
+                if (balance.capital.length > 0) {
+                    const capitalDiv = document.createElement('div');
+                    capitalDiv.className = 'balance-seccion';
+                    
+                    let totalCapital = 0;
+                    balance.capital.forEach(cuenta => {
+                        if (cuenta.saldo > 0) {
+                            const item = document.createElement('div');
+                            item.className = 'balance-item';
+                            item.innerHTML = `
+                                <span>${cuenta.nombre}</span>
+                                <span>${cuenta.saldo.toFixed(2)}</span>
+                            `;
+                            capitalDiv.appendChild(item);
+                            totalCapital += cuenta.saldo;
+                        }
+                    });
+
+                    const totalDiv = document.createElement('div');
+                    totalDiv.className = 'balance-total';
+                    totalDiv.innerHTML = `
+                        <span>Total de Capital Contable</span>
+                        <span>${totalCapital.toFixed(2)}</span>
+                    `;
+                    capitalDiv.appendChild(totalDiv);
+                    capitalContent.appendChild(capitalDiv);
+                }
+
+                const totalPasivoCapital = balance.pasivo.corto_plazo.reduce((sum, c) => sum + c.saldo, 0) +
+                                           balance.capital.reduce((sum, c) => sum + c.saldo, 0);
+                const totalPCDiv = document.createElement('div');
+                totalPCDiv.className = 'resultado-total';
+                totalPCDiv.innerHTML = `
+                    <span>PASIVO + CAPITAL</span>
+                    <span>${totalPasivoCapital.toFixed(2)}</span>
+                `;
+                capitalContent.appendChild(totalPCDiv);
+
+                if (activoContent.innerHTML === '') {
+                    activoContent.innerHTML = '<p class="text-center">No hay activos registrados</p>';
+                }
+                if (capitalContent.children.length === 0) {
+                    capitalContent.innerHTML = '<p class="text-center">No hay capital registrado</p>';
+                }
+
+            } catch (error) {
+                console.error('Error al cargar balance general:', error);
+                document.getElementById('activoContent').innerHTML = 
+                    '<p class="text-center" style="color: red;">Error al cargar los datos</p>';
+                document.getElementById('pasivoContent').innerHTML = 
+                    '<p class="text-center" style="color: red;">Error al cargar los datos</p>';
+                document.getElementById('capitalContent').innerHTML = 
+                    '<p class="text-center" style="color: red;">Error al cargar los datos</p>';
+            }
+        }
+    </script>
+</body>
+</html>

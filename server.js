@@ -4,14 +4,26 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+
+// Servir archivos estáticos con MIME types correctos
+app.use(express.static('public', {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
 
 // Configuración de la base de datos
 const pool = mysql.createPool({
@@ -23,6 +35,16 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
+
+// Verificar conexión a la base de datos
+pool.getConnection()
+    .then(connection => {
+        console.log('✅ Conexión a la base de datos exitosa');
+        connection.release();
+    })
+    .catch(err => {
+        console.error('❌ Error al conectar a la base de datos:', err);
+    });
 
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
@@ -48,6 +70,8 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
     const { username, password } = req.body;
 
+    console.log('Intento de registro:', username);
+
     if (!username || !password) {
         return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
     }
@@ -67,6 +91,7 @@ app.post('/api/auth/register', async (req, res) => {
             [username, hashedPassword]
         );
 
+        console.log('✅ Usuario registrado:', username);
         res.status(201).json({ message: 'Usuario registrado exitosamente' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -81,6 +106,8 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
 
+    console.log('Intento de login:', username);
+
     if (!username || !password) {
         return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
     }
@@ -92,6 +119,7 @@ app.post('/api/auth/login', async (req, res) => {
         );
 
         if (users.length === 0) {
+            console.log('❌ Usuario no encontrado:', username);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
@@ -99,6 +127,7 @@ app.post('/api/auth/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
 
         if (!validPassword) {
+            console.log('❌ Contraseña incorrecta para:', username);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
@@ -108,6 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        console.log('✅ Login exitoso:', username);
         res.json({
             token,
             user: { id: user.id, username: user.username }
@@ -148,7 +178,6 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    // Validar que debe = haber
     const totalDebe = movimientos.reduce((sum, m) => sum + parseFloat(m.debe || 0), 0);
     const totalHaber = movimientos.reduce((sum, m) => sum + parseFloat(m.haber || 0), 0);
 
@@ -161,13 +190,11 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Obtener el siguiente número de asiento
         const [result] = await connection.query(
             'SELECT COALESCE(MAX(numero_asiento), 0) + 1 as siguiente FROM libro_diario'
         );
         const numeroAsiento = result[0].siguiente;
 
-        // Insertar asiento en libro diario
         const [asientoResult] = await connection.query(
             'INSERT INTO libro_diario (numero_asiento, fecha, concepto, usuario_id) VALUES (?, ?, ?, ?)',
             [numeroAsiento, fecha, concepto, req.user.id]
@@ -175,7 +202,6 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
 
         const asientoId = asientoResult.insertId;
 
-        // Insertar movimientos
         for (const mov of movimientos) {
             await connection.query(
                 'INSERT INTO movimientos (asiento_id, cuenta_id, debe, haber) VALUES (?, ?, ?, ?)',
@@ -219,7 +245,6 @@ app.get('/api/asientos', authenticateToken, async (req, res) => {
             ORDER BY ld.numero_asiento DESC
         `);
 
-        // Formatear los datos
         const asientosFormateados = asientos.map(asiento => {
             const movimientos = [];
             if (asiento.movimientos_data) {
@@ -301,7 +326,7 @@ app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
     }
 });
 
-// ==================== RUTAS DE BALANZA DE COMPROBACIÓN ====================
+// ==================== RUTAS DE BALANZA ====================
 
 app.get('/api/balanza', authenticateToken, async (req, res) => {
     try {
@@ -346,7 +371,7 @@ app.get('/api/balanza', authenticateToken, async (req, res) => {
     }
 });
 
-// ==================== RUTAS DE BALANCE GENERAL ====================
+// ==================== BALANCE GENERAL ====================
 
 app.get('/api/balance-general', authenticateToken, async (req, res) => {
     try {
@@ -411,7 +436,7 @@ app.get('/api/balance-general', authenticateToken, async (req, res) => {
     }
 });
 
-// ==================== RUTAS DE ESTADO DE RESULTADOS ====================
+// ==================== ESTADO DE RESULTADOS ====================
 
 app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     try {
@@ -470,20 +495,26 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     }
 });
 
-// Servir archivos HTML
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+// ==================== RUTAS DE ARCHIVOS HTML ====================
 
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'register.html'));
-});
-
+// Ruta raíz - Login
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Registro
+app.get('/register', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+// Panel (después de login)
+app.get('/panel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'panel.html'));
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`📁 Archivos estáticos en: ${path.join(__dirname, 'public')}`);
+    console.log(`🔐 JWT Secret configurado: ${process.env.JWT_SECRET ? '✅' : '❌'}`);
 });

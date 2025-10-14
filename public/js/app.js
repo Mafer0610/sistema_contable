@@ -5,7 +5,7 @@ let cuentas = [];
 document.addEventListener('DOMContentLoaded', async function() {
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        window.location.href = '/login';
+        window.location.href = '/';
         return;
     }
 
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('Error de autenticación:', error);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
-        window.location.href = '/login';
+        window.location.href = '/';
     }
 });
 
@@ -46,7 +46,7 @@ async function fetchWithAuth(url, options = {}) {
     if (response.status === 401 || response.status === 403) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
-        window.location.href = '/login';
+        window.location.href = '/';
         throw new Error('Sesión expirada');
     }
 
@@ -57,7 +57,7 @@ async function fetchWithAuth(url, options = {}) {
 function logout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
-    window.location.href = '/login';
+    window.location.href = '/';
 }
 
 // Cargar catálogo de cuentas
@@ -141,11 +141,11 @@ function calcularTotales() {
         totalHaber += haber;
     });
 
-    document.getElementById('totalDebe').textContent = `$${totalDebe.toFixed(2)}`;
-    document.getElementById('totalHaber').textContent = `$${totalHaber.toFixed(2)}`;
+    document.getElementById('totalDebe').textContent = `${totalDebe.toFixed(2)}`;
+    document.getElementById('totalHaber').textContent = `${totalHaber.toFixed(2)}`;
     
     const diferencia = Math.abs(totalDebe - totalHaber);
-    document.getElementById('diferencia').textContent = `$${diferencia.toFixed(2)}`;
+    document.getElementById('diferencia').textContent = `${diferencia.toFixed(2)}`;
     document.getElementById('diferencia').style.color = diferencia < 0.01 ? '#4caf50' : '#f44336';
 }
 
@@ -227,7 +227,6 @@ async function cargarLibroDiario() {
         asientos.forEach(asiento => {
             const fecha = new Date(asiento.fecha).toLocaleDateString('es-MX');
             
-            // Fila de concepto
             const rowConcepto = tbody.insertRow();
             rowConcepto.innerHTML = `
                 <td colspan="5" style="background: #f8f9fa; font-weight: bold; padding: 10px;">
@@ -235,19 +234,17 @@ async function cargarLibroDiario() {
                 </td>
             `;
 
-            // Filas de movimientos
             asiento.movimientos.forEach(mov => {
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td></td>
                     <td></td>
                     <td>${mov.cuenta}</td>
-                    <td class="text-right">${mov.debe > 0 ? `$${mov.debe.toFixed(2)}` : ''}</td>
-                    <td class="text-right">${mov.haber > 0 ? `$${mov.haber.toFixed(2)}` : ''}</td>
+                    <td class="text-right">${mov.debe > 0 ? `${mov.debe.toFixed(2)}` : ''}</td>
+                    <td class="text-right">${mov.haber > 0 ? `${mov.haber.toFixed(2)}` : ''}</td>
                 `;
             });
 
-            // Fila separadora
             const rowSeparador = tbody.insertRow();
             rowSeparador.innerHTML = `<td colspan="5" style="height: 10px;"></td>`;
         });
@@ -281,9 +278,9 @@ async function cargarLibroMayor() {
                     <tr>
                         <td>${fecha}</td>
                         <td>${mov.concepto}</td>
-                        <td class="text-right">${mov.debe > 0 ? `$${mov.debe.toFixed(2)}` : ''}</td>
-                        <td class="text-right">${mov.haber > 0 ? `$${mov.haber.toFixed(2)}` : ''}</td>
-                        <td class="text-right">$${mov.saldo.toFixed(2)}</td>
+                        <td class="text-right">${mov.debe > 0 ? `${mov.debe.toFixed(2)}` : ''}</td>
+                        <td class="text-right">${mov.haber > 0 ? `${mov.haber.toFixed(2)}` : ''}</td>
+                        <td class="text-right">${mov.saldo.toFixed(2)}</td>
                     </tr>
                 `;
             });
@@ -308,7 +305,7 @@ async function cargarLibroMayor() {
                     <tfoot>
                         <tr>
                             <td colspan="4" class="text-right"><strong>Saldo Final:</strong></td>
-                            <td class="text-right"><strong>$${cuenta.saldoFinal.toFixed(2)}</strong></td>
+                            <td class="text-right"><strong>${cuenta.saldoFinal.toFixed(2)}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -347,10 +344,10 @@ async function cargarBalanza() {
             const row = tbody.insertRow();
             row.innerHTML = `
                 <td>${cuenta.nombre}</td>
-                <td class="text-right">$${cuenta.movimientos.debe.toFixed(2)}</td>
-                <td class="text-right">$${cuenta.movimientos.haber.toFixed(2)}</td>
-                <td class="text-right">${cuenta.saldos.deudor > 0 ? `$${cuenta.saldos.deudor.toFixed(2)}` : ''}</td>
-                <td class="text-right">${cuenta.saldos.acreedor > 0 ? `$${cuenta.saldos.acreedor.toFixed(2)}` : ''}</td>
+                <td class="text-right">${cuenta.movimientos.debe.toFixed(2)}</td>
+                <td class="text-right">${cuenta.movimientos.haber.toFixed(2)}</td>
+                <td class="text-right">${cuenta.saldos.deudor > 0 ? `${cuenta.saldos.deudor.toFixed(2)}` : ''}</td>
+                <td class="text-right">${cuenta.saldos.acreedor > 0 ? `${cuenta.saldos.acreedor.toFixed(2)}` : ''}</td>
             `;
 
             totales.debe += cuenta.movimientos.debe;
@@ -385,11 +382,9 @@ async function cargarBalanceGeneral() {
         const response = await fetchWithAuth(`${API_BASE}/balance-general`);
         const balance = await response.json();
         
-        // ACTIVO
         const activoContent = document.getElementById('activoContent');
         activoContent.innerHTML = '';
 
-        // Activo Circulante
         if (balance.activo.circulante.length > 0) {
             const circulanteDiv = document.createElement('div');
             circulanteDiv.className = 'balance-seccion';
@@ -419,7 +414,6 @@ async function cargarBalanceGeneral() {
             activoContent.appendChild(circulanteDiv);
         }
 
-        // Activo No Circulante
         if (balance.activo.no_circulante.length > 0) {
             const noCirculanteDiv = document.createElement('div');
             noCirculanteDiv.className = 'balance-seccion';
@@ -449,7 +443,6 @@ async function cargarBalanceGeneral() {
             activoContent.appendChild(noCirculanteDiv);
         }
 
-        // Total Activo
         const totalActivoDiv = document.createElement('div');
         totalActivoDiv.className = 'resultado-total';
         const totalActivo = balance.activo.circulante.reduce((sum, c) => sum + c.saldo, 0) +
@@ -460,7 +453,6 @@ async function cargarBalanceGeneral() {
         `;
         activoContent.appendChild(totalActivoDiv);
 
-        // PASIVO
         const pasivoContent = document.getElementById('pasivoContent');
         pasivoContent.innerHTML = '';
 
@@ -493,7 +485,6 @@ async function cargarBalanceGeneral() {
             pasivoContent.appendChild(cortoPlazoDiv);
         }
 
-        // CAPITAL
         const capitalContent = document.getElementById('capitalContent');
         capitalContent.innerHTML = '';
 
@@ -525,7 +516,6 @@ async function cargarBalanceGeneral() {
             capitalContent.appendChild(capitalDiv);
         }
 
-        // Total Pasivo + Capital
         const totalPasivoCapital = balance.pasivo.corto_plazo.reduce((sum, c) => sum + c.saldo, 0) +
                                    balance.capital.reduce((sum, c) => sum + c.saldo, 0);
         const totalPCDiv = document.createElement('div');
@@ -551,7 +541,6 @@ async function cargarEstadoResultados() {
         const container = document.getElementById('estadoResultadosContent');
         container.innerHTML = '';
 
-        // Ventas (Ingresos)
         const ventasDiv = document.createElement('div');
         ventasDiv.className = 'resultado-seccion';
         ventasDiv.innerHTML = '<h3>Ventas</h3>';
@@ -567,7 +556,6 @@ async function cargarEstadoResultados() {
                 `;
                 ventasDiv.appendChild(item);
                 
-                // Las devoluciones y rebajas se restan
                 if (cuenta.nombre.includes('Devoluciones') || cuenta.nombre.includes('Rebajas') || cuenta.nombre.includes('Descuentos')) {
                     totalVentas -= cuenta.monto;
                 } else {
@@ -585,7 +573,6 @@ async function cargarEstadoResultados() {
         ventasDiv.appendChild(ventasNetasDiv);
         container.appendChild(ventasDiv);
 
-        // Costo de Ventas
         if (estado.costo_ventas.length > 0) {
             const costoDiv = document.createElement('div');
             costoDiv.className = 'resultado-seccion';
@@ -614,7 +601,6 @@ async function cargarEstadoResultados() {
             costoDiv.appendChild(costoTotalDiv);
             container.appendChild(costoDiv);
 
-            // Utilidad Bruta
             const utilidadBruta = totalVentas - totalCosto;
             const utilidadBrutaDiv = document.createElement('div');
             utilidadBrutaDiv.className = 'resultado-subtotal';
@@ -626,7 +612,6 @@ async function cargarEstadoResultados() {
             container.appendChild(utilidadBrutaDiv);
         }
 
-        // Gastos de Operación
         if (estado.gastos.length > 0) {
             const gastosDiv = document.createElement('div');
             gastosDiv.className = 'resultado-seccion';
@@ -655,7 +640,6 @@ async function cargarEstadoResultados() {
             gastosDiv.appendChild(gastosTotalDiv);
             container.appendChild(gastosDiv);
 
-            // Utilidad Neta
             const costoTotal = estado.costo_ventas.reduce((sum, c) => sum + c.monto, 0);
             const utilidadNeta = totalVentas - costoTotal - totalGastos;
             const utilidadNetaDiv = document.createElement('div');

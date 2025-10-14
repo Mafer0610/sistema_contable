@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro</title>
-    <link rel="stylesheet" href="stylesRegister.css">
+    <title>Registro - Sistema Contable</title>
+    <link rel="stylesheet" href="css/stylesRegister.css">
 </head>
 <body>
     <div class="register-container">
@@ -14,26 +14,28 @@
         </div>
 
         <form id="registerForm">
-            <div id="alertContainer" class="alert" style="display: none;"></div>
+            <div class="alert" id="alert" style="display: none;"></div>
 
             <div class="form-group">
                 <label for="username">🔤 Usuario:</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username" required minlength="3">
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="password">🔑 Contraseña:</label>
-                    <input type="password" id="password" name="password" required minlength="6">
-                </div>
+            <div class="form-group">
+                <label for="password">🔑 Contraseña:</label>
+                <input type="password" id="password" name="password" required minlength="6">
+            </div>
 
+            <div class="form-group">
+                <label for="confirmPassword">🔐 Confirmar Contraseña:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6">
             </div>
 
             <button type="submit" class="btn">✅ Registrarse</button>
         </form>
 
         <div class="login-link">
-            <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
+            <p>¿Ya tienes cuenta? <a href="/">Inicia sesión aquí</a></p>
         </div>
     </div>
 

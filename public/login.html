@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema Contable</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-form">
+            <div class="logo">
+                <h1>🏢 Sistema Contable</h1>
+            </div>
+            
+            <form id="loginForm">
+                <div class="alert" id="alert"></div>
+                
+                <div class="form-group">
+                    <label for="username">
+                        <span class="icon">👤</span>
+                        Usuario
+                    </label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="Ingresa tu usuario">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">
+                        <span class="icon">🔒</span>
+                        Contraseña
+                    </label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Ingresa tu contraseña">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <span class="icon">🚀</span>
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="form-footer">
+                <p>¿No tienes cuenta? <a href="/register">Regístrate aquí</a></p>
+                <p class="demo-info">
+                    <strong>Usuario demo:</strong> admin<br>
+                    <strong>Contraseña:</strong> 123
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

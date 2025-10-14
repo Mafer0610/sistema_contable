@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro</title>
+    <link rel="stylesheet" href="stylesRegister.css">
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h1>🏢 Sistema Contable</h1>
+            <p>Crea tu cuenta para acceder al sistema</p>
+        </div>
+
+        <form id="registerForm">
+            <div id="alertContainer" class="alert" style="display: none;"></div>
+
+            <div class="form-group">
+                <label for="username">🔤 Usuario:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">🔑 Contraseña:</label>
+                    <input type="password" id="password" name="password" required minlength="6">
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn">✅ Registrarse</button>
+        </form>
+
+        <div class="login-link">
+            <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
+        </div>
+    </div>
+
+    <script src="js/register.js"></script>
+</body>
+</html>

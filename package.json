@@ -1,0 +1,21 @@
+{
+  "name": "sistema_contable",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Mafer0610/sistema_contable#readme",
+  "bugs": {
+    "url": "https://github.com/Mafer0610/sistema_contable/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mafer0610/sistema_contable.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  }
+}

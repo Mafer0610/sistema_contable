@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estado de Resultados - Sistema Contable</title>
+    <title>Estado de Resultados</title>
     <link rel="stylesheet" href="css/styles.css">
     <style>
         .tabla-estado-resultados {
@@ -52,7 +52,7 @@
     <div class="dashboard">
         <header class="header">
             <div class="header-content">
-                <h1>Sistema Contable</h1>
+                <h1>Sky Home S. A.</h1>
                 <div class="user-info">
                     <span id="username">Usuario</span>
                     <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
@@ -148,7 +148,8 @@
         }
 
         function formatMoney(value) {
-            return value === 0 ? '-' : `$${value.toFixed(2)}`;
+            if (value === 0 || value === null || value === undefined) return '-';
+            return `$${value.toFixed(2)}`;
         }
 
         function fila(cuenta, c1 = '', c2 = '', c3 = '', c4 = '', clase = '') {
@@ -172,13 +173,13 @@
                 let html = '';
 
                 // VENTAS
-                html += fila('Ventas totales', '', '', formatMoney(estado.ventas.ventas_totales));
+                html += fila('Ventas totales', '', '', '', formatMoney(estado.ventas.ventas_totales));
                 html += fila('Dev. S/Ventas', '', formatMoney(estado.ventas.devoluciones));
                 html += fila('Reb. S/Ventas', '', formatMoney(estado.ventas.rebajas));
                 html += fila('Desctos. S/Ventas', '', formatMoney(estado.ventas.descuentos));
                 html += fila('Ventas netas', '', '', '', formatMoney(estado.ventas.ventas_netas), 'fila-destacada');
 
-                // COSTO DE VENTAS
+                // INVENTARIO Y COMPRAS
                 html += fila('Inventario inicial', '', '', formatMoney(estado.costo_ventas.inventario_inicial));
                 html += fila('Compras', formatMoney(estado.costo_ventas.compras));
                 html += fila('Gastos de compra', formatMoney(estado.costo_ventas.gastos_compra));
@@ -196,16 +197,16 @@
 
                 // GASTOS DE OPERACIÓN
                 html += fila('Gastos de operación');
-                html += fila('Gastos de venta', '', '', '', formatMoney(estado.gastos_operacion.gastos_venta));
-                html += fila('Gastos de admon', '', '', '', formatMoney(estado.gastos_operacion.gastos_administracion));
+                html += fila('Gastos de venta', '', '', formatMoney(estado.gastos_operacion.gastos_venta));
+                html += fila('Gastos de admon', '', '', formatMoney(estado.gastos_operacion.gastos_administracion));
                 html += fila('Total gastos de operación', '', '', '', formatMoney(estado.gastos_operacion.total), 'fila-subtotal');
 
                 // UTILIDAD ANTES DE IMPUESTOS
-                html += fila('Utilidad antes de impuestos', '', '', '', formatMoney(estado.utilidad_antes_impuestos), 'fila-destacada');
+                html += fila('Utilidades antes de impuestos', '', '', '', formatMoney(estado.utilidad_antes_impuestos), 'fila-destacada');
 
                 // IMPUESTOS
-                html += fila('ISR 30%', '', '', '', formatMoney(estado.impuestos.isr_30));
-                html += fila('PTU 10%', '', '', '', formatMoney(estado.impuestos.ptu_10));
+                html += fila('ISR 30%', '', '', formatMoney(estado.impuestos.isr_30));
+                html += fila('PTU 10%', '', '', formatMoney(estado.impuestos.ptu_10));
                 html += fila('Total impuestos', '', '', '', formatMoney(estado.impuestos.total), 'fila-subtotal');
 
                 // UTILIDAD NETA

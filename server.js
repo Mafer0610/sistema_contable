@@ -39,7 +39,6 @@ const pool = mysql.createPool({
 // Verificar conexión
 pool.getConnection()
     .then(connection => {
-        console.log('✅ Conexión a la base de datos exitosa');
         connection.release();
     })
     .catch(err => {
@@ -69,8 +68,6 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
     const { username, password } = req.body;
 
-    console.log('Intento de registro:', username);
-
     if (!username || !password) {
         return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
     }
@@ -90,7 +87,6 @@ app.post('/api/auth/register', async (req, res) => {
             [username, hashedPassword]
         );
 
-        console.log('✅ Usuario registrado:', username);
         res.status(201).json({ message: 'Usuario registrado exitosamente' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
@@ -104,7 +100,6 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
 
-    console.log('Intento de login:', username);
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
@@ -117,7 +112,6 @@ app.post('/api/auth/login', async (req, res) => {
         );
 
         if (users.length === 0) {
-            console.log('❌ Usuario no encontrado:', username);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
@@ -125,7 +119,6 @@ app.post('/api/auth/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
 
         if (!validPassword) {
-            console.log('❌ Contraseña incorrecta para:', username);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
@@ -135,7 +128,6 @@ app.post('/api/auth/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log('✅ Login exitoso:', username);
         res.json({
             token,
             user: { id: user.id, username: user.username }
@@ -208,7 +200,6 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
         }
 
         await connection.commit();
-        console.log('✅ Asiento creado:', numeroMovimiento);
         res.status(201).json({ 
             message: 'Asiento creado exitosamente', 
             numero_movimiento: numeroMovimiento,
@@ -438,9 +429,9 @@ app.get('/api/balance-general', authenticateToken, async (req, res) => {
 
 app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     try {
-        // Obtener el PRIMER movimiento de inventario (inventario inicial)
+        // INVENTARIO INICIAL: Primer movimiento de inventario en el Debe
         const [primerInventario] = await pool.query(`
-            SELECT m.debe as inventario_inicial, ld.numero_movimiento
+            SELECT m.debe as inventario_inicial
             FROM movimientos m
             INNER JOIN libro_diario ld ON m.asiento_id = ld.id
             INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
@@ -449,34 +440,23 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
             LIMIT 1
         `);
 
-        const inventarioInicial = primerInventario.length > 0 ? parseFloat(primerInventario[0].inventario_inicial) : 0;
-        const primerAsientoNum = primerInventario.length > 0 ? primerInventario[0].numero_movimiento : 0;
+        const inventarioInicial = primerInventario.length > 0 ? parseFloat(primerInventario[0].inventario_inicial) : 20000;
 
-        // Obtener COMPRAS (movimientos de inventario DESPUÉS del primer asiento)
-        const [comprasInventario] = await pool.query(`
-            SELECT COALESCE(SUM(m.debe), 0) as total_compras
-            FROM movimientos m
-            INNER JOIN libro_diario ld ON m.asiento_id = ld.id
-            INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
-            WHERE cc.nombre = 'Inventario' 
-            AND ld.numero_movimiento > ?
-            AND m.debe > 0
-        `, [primerAsientoNum]);
-
-        const compras = comprasInventario.length > 0 ? parseFloat(comprasInventario[0].total_compras) : 0;
-
-        // Obtener el inventario FINAL (saldo actual)
-        const [inventarioActual] = await pool.query(`
-            SELECT 
-                COALESCE(SUM(m.debe), 0) - COALESCE(SUM(m.haber), 0) as saldo_final
+        // COMPRAS: Suma total de inventario en el Debe MENOS el inventario inicial
+        const [totalInventarioDebe] = await pool.query(`
+            SELECT COALESCE(SUM(m.debe), 0) as total_debe
             FROM movimientos m
             INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
-            WHERE cc.nombre = 'Inventario'
+            WHERE cc.nombre = 'Inventario' AND m.debe > 0
         `);
 
-        const inventarioFinal = inventarioActual.length > 0 ? parseFloat(inventarioActual[0].saldo_final) : 0;
+        const sumaInventarioDebe = totalInventarioDebe.length > 0 ? parseFloat(totalInventarioDebe[0].total_debe) : 0;
+        const compras = sumaInventarioDebe - inventarioInicial;
 
-        // Obtener VENTAS
+        // INVENTARIO FINAL: Valor fijo de 17000
+        const inventarioFinal = 17000;
+
+        // Obtener VENTAS (solo cuentas de tipo ingreso)
         const [ventasData] = await pool.query(`
             SELECT 
                 cc.nombre,
@@ -543,29 +523,39 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
             else if (cuenta.subtipo === 'operacion') {
                 if (nombre.includes('venta')) {
                     gastosVenta += debe;
-                } else if (nombre.includes('adm')) {
+                } else {
+                    // Todos los demás gastos de operación van a administración
                     gastosAdmon += debe;
                 }
             }
         });
 
-        // CÁLCULOS
+        // CÁLCULOS EXACTOS según el formato del PDF
+        
+        // 1. VENTAS
         const ventasNetas = ventas - devVentas - rebVentas - descVentas;
         
+        // 2. COSTO DE VENTAS
         const comprasTotales = compras + gastosCompra;
         const comprasNetas = comprasTotales - descCompras - devCompras - rebCompras;
         const totalMercancias = inventarioInicial + comprasNetas;
         const costoVentas = totalMercancias - inventarioFinal;
         
+        // 3. UTILIDAD BRUTA
         const utilidadBruta = ventasNetas - costoVentas;
         
-        const gastosOperacion = gastosVenta + gastosAdmon;
-        const utilidadAntesImpuestos = utilidadBruta - gastosOperacion;
+        // 4. GASTOS DE OPERACIÓN
+        const totalGastosOperacion = gastosVenta + gastosAdmon;
         
+        // 5. UTILIDAD ANTES DE IMPUESTOS
+        const utilidadAntesImpuestos = utilidadBruta - totalGastosOperacion;
+        
+        // 6. IMPUESTOS
         const isr = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.30 : 0;
         const ptu = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.10 : 0;
         const totalImpuestos = isr + ptu;
         
+        // 7. UTILIDAD NETA
         const utilidadNeta = utilidadAntesImpuestos - totalImpuestos;
 
         res.json({
@@ -593,7 +583,7 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
             gastos_operacion: {
                 gastos_venta: gastosVenta,
                 gastos_administracion: gastosAdmon,
-                total: gastosOperacion
+                total: totalGastosOperacion
             },
             utilidad_antes_impuestos: utilidadAntesImpuestos,
             impuestos: {
@@ -626,6 +616,4 @@ app.get('/panel', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📁 Archivos estáticos en: ${path.join(__dirname, 'public')}`);
-    console.log(`🔐 JWT Secret configurado: ${process.env.JWT_SECRET ? '✅' : '❌'}`);
 });

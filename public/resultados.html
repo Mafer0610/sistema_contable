@@ -5,6 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estado de Resultados - Sistema Contable</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .tabla-estado-resultados {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .tabla-estado-resultados th,
+        .tabla-estado-resultados td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .tabla-estado-resultados th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        .tabla-estado-resultados td:nth-child(2),
+        .tabla-estado-resultados td:nth-child(3),
+        .tabla-estado-resultados td:nth-child(4),
+        .tabla-estado-resultados td:nth-child(5) {
+            text-align: right;
+            width: 15%;
+        }
+        .tabla-estado-resultados tr:hover {
+            background: #f8f9fa;
+        }
+        .fila-subtotal {
+            background: #f0f0f0 !important;
+            font-weight: bold;
+        }
+        .fila-total {
+            background: #667eea !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .fila-destacada {
+            background: #e3f2fd !important;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -31,10 +73,23 @@
         <main class="content">
             <section class="section active">
                 <h2>Estado de Resultados</h2>
-                <div class="estado-resultados">
-                    <div id="estadoResultadosContent">
-                        <p class="text-center">Cargando...</p>
-                    </div>
+                <div class="table-container">
+                    <table class="tabla-estado-resultados" id="tablaEstado">
+                        <thead>
+                            <tr>
+                                <th>Cuenta</th>
+                                <th>1</th>
+                                <th>2</th>
+                                <th>3</th>
+                                <th>4</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
         </main>
@@ -92,150 +147,76 @@
             window.location.href = '/';
         }
 
+        function formatMoney(value) {
+            return value === 0 ? '-' : `$${value.toFixed(2)}`;
+        }
+
+        function fila(cuenta, c1 = '', c2 = '', c3 = '', c4 = '', clase = '') {
+            return `
+                <tr class="${clase}">
+                    <td>${cuenta}</td>
+                    <td>${c1}</td>
+                    <td>${c2}</td>
+                    <td>${c3}</td>
+                    <td>${c4}</td>
+                </tr>
+            `;
+        }
+
         async function cargarEstadoResultados() {
             try {
                 const response = await fetchWithAuth(`${API_BASE}/estado-resultados`);
                 const estado = await response.json();
                 
-                const container = document.getElementById('estadoResultadosContent');
-                container.innerHTML = '';
+                const tbody = document.querySelector('#tablaEstado tbody');
+                let html = '';
 
-                if (estado.ingresos.length === 0 && estado.gastos.length === 0 && estado.costo_ventas.length === 0) {
-                    container.innerHTML = '<p class="text-center">No hay operaciones registradas</p>';
-                    return;
-                }
+                // VENTAS
+                html += fila('Ventas totales', '', '', formatMoney(estado.ventas.ventas_totales));
+                html += fila('Dev. S/Ventas', '', formatMoney(estado.ventas.devoluciones));
+                html += fila('Reb. S/Ventas', '', formatMoney(estado.ventas.rebajas));
+                html += fila('Desctos. S/Ventas', '', formatMoney(estado.ventas.descuentos));
+                html += fila('Ventas netas', '', '', '', formatMoney(estado.ventas.ventas_netas), 'fila-destacada');
 
-                const ventasDiv = document.createElement('div');
-                ventasDiv.className = 'resultado-seccion';
-                ventasDiv.innerHTML = '<h3>Ventas</h3>';
-                
-                let totalVentas = 0;
-                estado.ingresos.forEach(cuenta => {
-                    if (cuenta.monto > 0) {
-                        const item = document.createElement('div');
-                        item.className = 'resultado-item';
-                        item.innerHTML = `
-                            <span>${cuenta.nombre}</span>
-                            <span>${cuenta.monto.toFixed(2)}</span>
-                        `;
-                        ventasDiv.appendChild(item);
-                        
-                        if (cuenta.nombre.includes('Devoluciones') || cuenta.nombre.includes('Rebajas') || cuenta.nombre.includes('Descuentos')) {
-                            totalVentas -= cuenta.monto;
-                        } else {
-                            totalVentas += cuenta.monto;
-                        }
-                    }
-                });
+                // COSTO DE VENTAS
+                html += fila('Inventario inicial', '', '', formatMoney(estado.costo_ventas.inventario_inicial));
+                html += fila('Compras', formatMoney(estado.costo_ventas.compras));
+                html += fila('Gastos de compra', formatMoney(estado.costo_ventas.gastos_compra));
+                html += fila('Compras totales', '', formatMoney(estado.costo_ventas.compras_totales));
+                html += fila('Desctos. S/Compras', formatMoney(estado.costo_ventas.descuentos));
+                html += fila('Dev. S/Compras', formatMoney(estado.costo_ventas.devoluciones));
+                html += fila('Reb. S/Compras', formatMoney(estado.costo_ventas.rebajas));
+                html += fila('Compras netas', '', '', formatMoney(estado.costo_ventas.compras_netas));
+                html += fila('Total mercancías', '', '', formatMoney(estado.costo_ventas.total_mercancias));
+                html += fila('Inventario final', '', '', formatMoney(estado.costo_ventas.inventario_final));
+                html += fila('Costo de ventas', '', '', '', formatMoney(estado.costo_ventas.costo_ventas), 'fila-subtotal');
 
-                if (estado.ingresos.length > 0 && estado.ingresos.some(c => c.monto > 0)) {
-                    const ventasNetasDiv = document.createElement('div');
-                    ventasNetasDiv.className = 'resultado-subtotal';
-                    ventasNetasDiv.innerHTML = `
-                        <span>Ventas Netas</span>
-                        <span>${totalVentas.toFixed(2)}</span>
-                    `;
-                    ventasDiv.appendChild(ventasNetasDiv);
-                    container.appendChild(ventasDiv);
-                }
+                // UTILIDAD BRUTA
+                html += fila('Utilidad bruta', '', '', '', formatMoney(estado.utilidad_bruta), 'fila-destacada');
 
-                if (estado.costo_ventas.length > 0 && estado.costo_ventas.some(c => c.monto > 0)) {
-                    const costoDiv = document.createElement('div');
-                    costoDiv.className = 'resultado-seccion';
-                    costoDiv.innerHTML = '<h3>Costo de Ventas</h3>';
-                    
-                    let totalCosto = 0;
-                    estado.costo_ventas.forEach(cuenta => {
-                        if (cuenta.monto > 0) {
-                            const item = document.createElement('div');
-                            item.className = 'resultado-item';
-                            item.innerHTML = `
-                                <span>${cuenta.nombre}</span>
-                                <span>${cuenta.monto.toFixed(2)}</span>
-                            `;
-                            costoDiv.appendChild(item);
-                            
-                            if (cuenta.nombre.includes('Devoluciones') || cuenta.nombre.includes('Rebajas') || cuenta.nombre.includes('Descuentos')) {
-                                totalCosto -= cuenta.monto;
-                            } else {
-                                totalCosto += cuenta.monto;
-                            }
-                        }
-                    });
+                // GASTOS DE OPERACIÓN
+                html += fila('Gastos de operación');
+                html += fila('Gastos de venta', '', '', '', formatMoney(estado.gastos_operacion.gastos_venta));
+                html += fila('Gastos de admon', '', '', '', formatMoney(estado.gastos_operacion.gastos_administracion));
+                html += fila('Total gastos de operación', '', '', '', formatMoney(estado.gastos_operacion.total), 'fila-subtotal');
 
-                    const costoTotalDiv = document.createElement('div');
-                    costoTotalDiv.className = 'resultado-subtotal';
-                    costoTotalDiv.innerHTML = `
-                        <span>Total Costo de Ventas</span>
-                        <span>${totalCosto.toFixed(2)}</span>
-                    `;
-                    costoDiv.appendChild(costoTotalDiv);
-                    container.appendChild(costoDiv);
+                // UTILIDAD ANTES DE IMPUESTOS
+                html += fila('Utilidad antes de impuestos', '', '', '', formatMoney(estado.utilidad_antes_impuestos), 'fila-destacada');
 
-                    const utilidadBruta = totalVentas - totalCosto;
-                    const utilidadBrutaDiv = document.createElement('div');
-                    utilidadBrutaDiv.className = 'resultado-subtotal';
-                    utilidadBrutaDiv.style.background = '#e3f2fd';
-                    utilidadBrutaDiv.innerHTML = `
-                        <span>Utilidad Bruta</span>
-                        <span>${utilidadBruta.toFixed(2)}</span>
-                    `;
-                    container.appendChild(utilidadBrutaDiv);
-                }
+                // IMPUESTOS
+                html += fila('ISR 30%', '', '', '', formatMoney(estado.impuestos.isr_30));
+                html += fila('PTU 10%', '', '', '', formatMoney(estado.impuestos.ptu_10));
+                html += fila('Total impuestos', '', '', '', formatMoney(estado.impuestos.total), 'fila-subtotal');
 
-                if (estado.gastos.length > 0 && estado.gastos.some(c => c.monto > 0)) {
-                    const gastosDiv = document.createElement('div');
-                    gastosDiv.className = 'resultado-seccion';
-                    gastosDiv.innerHTML = '<h3>Gastos de Operación</h3>';
-                    
-                    let totalGastos = 0;
-                    estado.gastos.forEach(cuenta => {
-                        if (cuenta.monto > 0) {
-                            const item = document.createElement('div');
-                            item.className = 'resultado-item';
-                            item.innerHTML = `
-                                <span>${cuenta.nombre}</span>
-                                <span>${cuenta.monto.toFixed(2)}</span>
-                            `;
-                            gastosDiv.appendChild(item);
-                            totalGastos += cuenta.monto;
-                        }
-                    });
+                // UTILIDAD NETA
+                html += fila('Utilidad después de impuestos', '', '', '', formatMoney(estado.utilidad_neta), 'fila-total');
 
-                    const gastosTotalDiv = document.createElement('div');
-                    gastosTotalDiv.className = 'resultado-subtotal';
-                    gastosTotalDiv.innerHTML = `
-                        <span>Total Gastos de Operación</span>
-                        <span>${totalGastos.toFixed(2)}</span>
-                    `;
-                    gastosDiv.appendChild(gastosTotalDiv);
-                    container.appendChild(gastosDiv);
-
-                    const costoTotal = estado.costo_ventas.reduce((sum, c) => {
-                        if (c.nombre.includes('Devoluciones') || c.nombre.includes('Rebajas') || c.nombre.includes('Descuentos')) {
-                            return sum - c.monto;
-                        }
-                        return sum + c.monto;
-                    }, 0);
-                    
-                    const utilidadNeta = totalVentas - costoTotal - totalGastos;
-                    const utilidadNetaDiv = document.createElement('div');
-                    utilidadNetaDiv.className = 'resultado-total';
-                    utilidadNetaDiv.innerHTML = `
-                        <span>Utilidad Neta del Ejercicio</span>
-                        <span>${utilidadNeta.toFixed(2)}</span>
-                    `;
-                    container.appendChild(utilidadNetaDiv);
-                }
-
-                if (container.innerHTML === '') {
-                    container.innerHTML = '<p class="text-center">No hay operaciones registradas</p>';
-                }
+                tbody.innerHTML = html;
 
             } catch (error) {
                 console.error('Error al cargar estado de resultados:', error);
-                document.getElementById('estadoResultadosContent').innerHTML = 
-                    '<p class="text-center" style="color: red;">Error al cargar los datos</p>';
+                document.querySelector('#tablaEstado tbody').innerHTML = 
+                    '<tr><td colspan="5" class="text-center" style="color: red;">Error al cargar los datos</td></tr>';
             }
         }
     </script>

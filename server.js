@@ -438,55 +438,171 @@ app.get('/api/balance-general', authenticateToken, async (req, res) => {
 
 app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     try {
-        const [cuentas] = await pool.query(`
+        // Obtener el PRIMER movimiento de inventario (inventario inicial)
+        const [primerInventario] = await pool.query(`
+            SELECT m.debe as inventario_inicial, ld.numero_movimiento
+            FROM movimientos m
+            INNER JOIN libro_diario ld ON m.asiento_id = ld.id
+            INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
+            WHERE cc.nombre = 'Inventario' AND m.debe > 0
+            ORDER BY ld.fecha ASC, ld.numero_movimiento ASC, m.id ASC
+            LIMIT 1
+        `);
+
+        const inventarioInicial = primerInventario.length > 0 ? parseFloat(primerInventario[0].inventario_inicial) : 0;
+        const primerAsientoNum = primerInventario.length > 0 ? primerInventario[0].numero_movimiento : 0;
+
+        // Obtener COMPRAS (movimientos de inventario DESPUÉS del primer asiento)
+        const [comprasInventario] = await pool.query(`
+            SELECT COALESCE(SUM(m.debe), 0) as total_compras
+            FROM movimientos m
+            INNER JOIN libro_diario ld ON m.asiento_id = ld.id
+            INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
+            WHERE cc.nombre = 'Inventario' 
+            AND ld.numero_movimiento > ?
+            AND m.debe > 0
+        `, [primerAsientoNum]);
+
+        const compras = comprasInventario.length > 0 ? parseFloat(comprasInventario[0].total_compras) : 0;
+
+        // Obtener el inventario FINAL (saldo actual)
+        const [inventarioActual] = await pool.query(`
             SELECT 
-                cc.codigo,
+                COALESCE(SUM(m.debe), 0) - COALESCE(SUM(m.haber), 0) as saldo_final
+            FROM movimientos m
+            INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
+            WHERE cc.nombre = 'Inventario'
+        `);
+
+        const inventarioFinal = inventarioActual.length > 0 ? parseFloat(inventarioActual[0].saldo_final) : 0;
+
+        // Obtener VENTAS
+        const [ventasData] = await pool.query(`
+            SELECT 
                 cc.nombre,
-                cc.tipo,
-                cc.subtipo,
-                cc.naturaleza,
                 COALESCE(SUM(m.debe), 0) as total_debe,
                 COALESCE(SUM(m.haber), 0) as total_haber
             FROM catalogo_cuentas cc
             LEFT JOIN movimientos m ON cc.id = m.cuenta_id
-            WHERE cc.activa = TRUE AND cc.tipo IN ('ingreso', 'gasto')
-            GROUP BY cc.id
-            ORDER BY cc.codigo
+            WHERE cc.tipo = 'ingreso'
+            GROUP BY cc.id, cc.nombre
         `);
 
-        const estado = {
-            ingresos: [],
-            gastos: [],
-            costo_ventas: []
-        };
+        let ventas = 0, devVentas = 0, rebVentas = 0, descVentas = 0;
 
-        cuentas.forEach(cuenta => {
+        ventasData.forEach(cuenta => {
+            const nombre = cuenta.nombre.toLowerCase();
             const debe = parseFloat(cuenta.total_debe);
             const haber = parseFloat(cuenta.total_haber);
-            let monto = 0;
 
-            if (cuenta.tipo === 'ingreso') {
-                monto = haber - debe;
-            } else {
-                monto = debe - haber;
-            }
-
-            const cuentaFormateada = {
-                codigo: cuenta.codigo,
-                nombre: cuenta.nombre,
-                monto: Math.abs(monto)
-            };
-
-            if (cuenta.tipo === 'ingreso') {
-                estado.ingresos.push(cuentaFormateada);
-            } else if (cuenta.subtipo === 'costo_ventas') {
-                estado.costo_ventas.push(cuentaFormateada);
-            } else {
-                estado.gastos.push(cuentaFormateada);
+            if (nombre.includes('devol') && nombre.includes('venta')) {
+                devVentas += debe;
+            } else if (nombre.includes('rebaj') && nombre.includes('venta')) {
+                rebVentas += debe;
+            } else if (nombre.includes('desc') && nombre.includes('venta')) {
+                descVentas += debe;
+            } else if (nombre.includes('venta')) {
+                ventas += haber;
             }
         });
 
-        res.json(estado);
+        // Obtener GASTOS
+        const [gastosData] = await pool.query(`
+            SELECT 
+                cc.nombre,
+                cc.subtipo,
+                COALESCE(SUM(m.debe), 0) as total_debe,
+                COALESCE(SUM(m.haber), 0) as total_haber
+            FROM catalogo_cuentas cc
+            LEFT JOIN movimientos m ON cc.id = m.cuenta_id
+            WHERE cc.tipo = 'gasto'
+            GROUP BY cc.id, cc.nombre, cc.subtipo
+        `);
+
+        let gastosCompra = 0, devCompras = 0, rebCompras = 0, descCompras = 0;
+        let gastosVenta = 0, gastosAdmon = 0;
+
+        gastosData.forEach(cuenta => {
+            const nombre = cuenta.nombre.toLowerCase();
+            const debe = parseFloat(cuenta.total_debe);
+            const haber = parseFloat(cuenta.total_haber);
+
+            // Costo de ventas
+            if (cuenta.subtipo === 'costo_ventas') {
+                if (nombre.includes('gasto') && nombre.includes('compra')) {
+                    gastosCompra += debe;
+                } else if (nombre.includes('devol') && nombre.includes('compra')) {
+                    devCompras += haber;
+                } else if (nombre.includes('rebaj') && nombre.includes('compra')) {
+                    rebCompras += haber;
+                } else if (nombre.includes('desc') && nombre.includes('compra')) {
+                    descCompras += haber;
+                }
+            }
+            // Gastos de operación
+            else if (cuenta.subtipo === 'operacion') {
+                if (nombre.includes('venta')) {
+                    gastosVenta += debe;
+                } else if (nombre.includes('adm')) {
+                    gastosAdmon += debe;
+                }
+            }
+        });
+
+        // CÁLCULOS
+        const ventasNetas = ventas - devVentas - rebVentas - descVentas;
+        
+        const comprasTotales = compras + gastosCompra;
+        const comprasNetas = comprasTotales - descCompras - devCompras - rebCompras;
+        const totalMercancias = inventarioInicial + comprasNetas;
+        const costoVentas = totalMercancias - inventarioFinal;
+        
+        const utilidadBruta = ventasNetas - costoVentas;
+        
+        const gastosOperacion = gastosVenta + gastosAdmon;
+        const utilidadAntesImpuestos = utilidadBruta - gastosOperacion;
+        
+        const isr = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.30 : 0;
+        const ptu = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.10 : 0;
+        const totalImpuestos = isr + ptu;
+        
+        const utilidadNeta = utilidadAntesImpuestos - totalImpuestos;
+
+        res.json({
+            ventas: {
+                ventas_totales: ventas,
+                devoluciones: devVentas,
+                rebajas: rebVentas,
+                descuentos: descVentas,
+                ventas_netas: ventasNetas
+            },
+            costo_ventas: {
+                inventario_inicial: inventarioInicial,
+                compras: compras,
+                gastos_compra: gastosCompra,
+                compras_totales: comprasTotales,
+                descuentos: descCompras,
+                devoluciones: devCompras,
+                rebajas: rebCompras,
+                compras_netas: comprasNetas,
+                total_mercancias: totalMercancias,
+                inventario_final: inventarioFinal,
+                costo_ventas: costoVentas
+            },
+            utilidad_bruta: utilidadBruta,
+            gastos_operacion: {
+                gastos_venta: gastosVenta,
+                gastos_administracion: gastosAdmon,
+                total: gastosOperacion
+            },
+            utilidad_antes_impuestos: utilidadAntesImpuestos,
+            impuestos: {
+                isr_30: isr,
+                ptu_10: ptu,
+                total: totalImpuestos
+            },
+            utilidad_neta: utilidadNeta
+        });
     } catch (error) {
         console.error('Error al obtener estado de resultados:', error);
         res.status(500).json({ error: 'Error al obtener estado de resultados' });

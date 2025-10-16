@@ -112,14 +112,17 @@
                         const fecha = new Date(mov.fecha).toLocaleDateString('es-MX');
                         htmlMovimientos += `
                             <tr>
+                                <td>${mov.numero_movimiento}</td>
                                 <td>${fecha}</td>
                                 <td>${mov.concepto}</td>
                                 <td class="text-right">${mov.debe > 0 ? mov.debe.toFixed(2) : ''}</td>
                                 <td class="text-right">${mov.haber > 0 ? mov.haber.toFixed(2) : ''}</td>
-                                <td class="text-right">${mov.saldo.toFixed(2)}</td>
                             </tr>
                         `;
                     });
+
+                    // Mostrar saldo final siempre positivo (valor absoluto)
+                    const saldoFinalAbsoluto = Math.abs(cuenta.saldoFinal);
 
                     cuentaDiv.innerHTML = `
                         <div class="cuenta-mayor-header">
@@ -128,11 +131,11 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>N° Mov</th>
                                     <th>Fecha</th>
                                     <th>Concepto</th>
                                     <th>Debe</th>
                                     <th>Haber</th>
-                                    <th>Saldo</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -141,7 +144,7 @@
                             <tfoot>
                                 <tr>
                                     <td colspan="4" class="text-right"><strong>Saldo Final:</strong></td>
-                                    <td class="text-right"><strong>${cuenta.saldoFinal.toFixed(2)}</strong></td>
+                                    <td class="text-right"><strong>${saldoFinalAbsoluto.toFixed(2)}</strong></td>
                                 </tr>
                             </tfoot>
                         </table>

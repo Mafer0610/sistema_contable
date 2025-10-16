@@ -276,8 +276,10 @@ app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
         const libroMayor = [];
 
         for (const cuenta of cuentas) {
+            // Obtener movimientos con el numero_movimiento de libro_diario
             const [movimientos] = await pool.query(`
                 SELECT 
+                    ld.numero_movimiento,
                     ld.fecha,
                     ld.concepto,
                     m.debe,
@@ -285,18 +287,18 @@ app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
                 FROM movimientos m
                 INNER JOIN libro_diario ld ON m.asiento_id = ld.id
                 WHERE m.cuenta_id = ?
-                ORDER BY ld.fecha, ld.id
+                ORDER BY ld.numero_movimiento, ld.fecha
             `, [cuenta.id]);
 
             let saldo = 0;
             const movimientosConSaldo = movimientos.map(mov => {
                 saldo += parseFloat(mov.debe) - parseFloat(mov.haber);
                 return {
+                    numero_movimiento: mov.numero_movimiento,
                     fecha: mov.fecha,
                     concepto: mov.concepto,
                     debe: parseFloat(mov.debe),
-                    haber: parseFloat(mov.haber),
-                    saldo: saldo
+                    haber: parseFloat(mov.haber)
                 };
             });
 

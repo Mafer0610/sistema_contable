@@ -35,8 +35,8 @@
                     <table id="tablaDiario">
                         <thead>
                             <tr>
-                                <th>Asiento</th>
                                 <th>Fecha</th>
+                                <th>Concepto</th>
                                 <th>Cuenta</th>
                                 <th>Debe</th>
                                 <th>Haber</th>
@@ -108,7 +108,10 @@
         async function cargarLibroDiario() {
             try {
                 const response = await fetchWithAuth(`${API_BASE}/asientos`);
-                const asientos = await response.json();
+                let asientos = await response.json();
+                
+                // Invertir el orden para mostrar del primero al último
+                asientos = asientos.reverse();
                 
                 const tbody = document.querySelector('#tablaDiario tbody');
                 tbody.innerHTML = '';
@@ -124,7 +127,7 @@
                     const rowConcepto = tbody.insertRow();
                     rowConcepto.innerHTML = `
                         <td colspan="5" style="background: #f8f9fa; font-weight: bold; padding: 10px;">
-                            ${fecha} - ${asiento.concepto} (Asiento #${asiento.numero_asiento})
+                            ${fecha} - ${asiento.concepto} (${asiento.numero_asiento})
                         </td>
                     `;
 

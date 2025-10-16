@@ -8,7 +8,6 @@
 </head>
 <body>
     <div class="dashboard">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
                 <h1>Sky Home S. A.</h1>
@@ -19,8 +18,8 @@
             </div>
         </header>
 
-        <!-- Sidebar -->
         <aside class="sidebar">
+            <a href="panel.html" class="nav-btn active">Inicio</a>
             <a href="movimientos.html" class="nav-btn">Agregar Movimiento</a>
             <a href="diario.html" class="nav-btn">Libro Diario</a>
             <a href="mayor.html" class="nav-btn">Libro Mayor</a>
@@ -29,35 +28,44 @@
             <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
         </aside>
 
-        <!-- Content -->
         <main class="content">
             <section class="section active">
-                <h2>Bienvenido al Sistema Contable</h2>
-                <div style="text-align: center; padding: 60px 20px;">
-                    <div style="font-size: 80px; margin-bottom: 20px;">📊</div>
-                    <h3 style="color: #667eea; margin-bottom: 20px;">Sistema de Gestión Contable</h3>
-                    <p style="color: #666; font-size: 16px; max-width: 600px; margin: 0 auto;">
-                        Selecciona una opción del menú lateral para comenzar a gestionar tus operaciones contables.
+                <div class="welcome-section">
+                    <h2 class="welcome-title">Sistema de Gestión Contable</h2>
+                    <p class="welcome-description">
+                        Cruz Córdova María Fernanda
                     </p>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
-                        <div style="background: #f8f9fa; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <div style="font-size: 40px; margin-bottom: 10px;">➕</div>
-                            <h4 style="color: #333;">Movimientos</h4>
-                            <p style="color: #666; font-size: 14px;">Registra asientos contables</p>
-                        </div>
+                    <div class="features-grid">
+                        <a href="movimientos.html" class="feature-card">
+                            <h4>Registrar Movimientos</h4>
+                            <p>Crea y gestiona asientos contables de forma rápida y precisa</p>
+                        </a>
                         
-                        <div style="background: #f8f9fa; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <div style="font-size: 40px; margin-bottom: 10px;">📖</div>
-                            <h4 style="color: #333;">Reportes</h4>
-                            <p style="color: #666; font-size: 14px;">Consulta estados financieros</p>
-                        </div>
+                        <a href="diario.html" class="feature-card">
+                            <h4>Libro Diario</h4>
+                            <p>Consulta el registro cronológico de todas tus operaciones</p>
+                        </a>
                         
-                        <div style="background: #f8f9fa; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <div style="font-size: 40px; margin-bottom: 10px;">💼</div>
-                            <h4 style="color: #333;">Balance</h4>
-                            <p style="color: #666; font-size: 14px;">Situación financiera</p>
-                        </div>
+                        <a href="mayor.html" class="feature-card">
+                            <h4>Libro Mayor</h4>
+                            <p>Revisa el detalle de movimientos por cada cuenta contable</p>
+                        </a>
+                        
+                        <a href="balanza.html" class="feature-card">
+                            <h4>Balanza de Comprobación</h4>
+                            <p>Verifica que tus registros estén correctamente balanceados</p>
+                        </a>
+                        
+                        <a href="balance.html" class="feature-card">
+                            <h4>Balance General</h4>
+                            <p>Conoce la situación financiera de tu empresa</p>
+                        </a>
+                        
+                        <a href="resultados.html" class="feature-card">
+                            <h4>Estado de Resultados</h4>
+                            <p>Analiza la rentabilidad y desempeño del negocio</p>
+                        </a>
                     </div>
                 </div>
             </section>
@@ -65,7 +73,6 @@
     </div>
 
     <script>
-        // Verificar autenticación
         document.addEventListener('DOMContentLoaded', async function() {
             const token = localStorage.getItem('auth_token');
             if (!token) {
@@ -92,7 +99,6 @@
             }
         });
 
-        // Cerrar sesión
         function logout() {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');

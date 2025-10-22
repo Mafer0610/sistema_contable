@@ -601,6 +601,103 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== RUTAS DE ARQUEO DE CAJA ====================
+
+// Obtener saldo actual de la cuenta Caja
+app.get('/api/arqueo/saldo-caja', authenticateToken, async (req, res) => {
+    try {
+        const [result] = await pool.query(`
+            SELECT 
+                COALESCE(SUM(m.debe), 0) - COALESCE(SUM(m.haber), 0) as saldo
+            FROM movimientos m
+            INNER JOIN catalogo_cuentas cc ON m.cuenta_id = cc.id
+            WHERE cc.nombre = 'Caja'
+        `);
+        
+        const saldo = result.length > 0 ? parseFloat(result[0].saldo) : 0;
+        res.json({ saldo });
+    } catch (error) {
+        console.error('Error al obtener saldo de caja:', error);
+        res.status(500).json({ error: 'Error al obtener saldo de caja' });
+    }
+});
+
+// Guardar arqueo de caja
+app.post('/api/arqueo', authenticateToken, async (req, res) => {
+    const {
+        saldo_sistema,
+        billetes_1000, billetes_500, billetes_200, billetes_100, billetes_50, billetes_20,
+        monedas_20, monedas_10, monedas_5, monedas_2, monedas_1, monedas_050c,
+        total_fisico, diferencia, observaciones
+    } = req.body;
+
+    try {
+        await pool.query(`
+            INSERT INTO arqueo_caja (
+                usuario_id, saldo_sistema,
+                billetes_1000, billetes_500, billetes_200, billetes_100, billetes_50, billetes_20,
+                monedas_20, monedas_10, monedas_5, monedas_2, monedas_1, monedas_050c,
+                total_fisico, diferencia, observaciones
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            req.user.id, saldo_sistema,
+            billetes_1000 || 0, billetes_500 || 0, billetes_200 || 0, 
+            billetes_100 || 0, billetes_50 || 0, billetes_20 || 0,
+            monedas_20 || 0, monedas_10 || 0, monedas_5 || 0, 
+            monedas_2 || 0, monedas_1 || 0, monedas_050c || 0,
+            total_fisico, diferencia, observaciones || null
+        ]);
+
+        res.status(201).json({ message: 'Arqueo guardado exitosamente' });
+    } catch (error) {
+        console.error('Error al guardar arqueo:', error);
+        res.status(500).json({ error: 'Error al guardar arqueo' });
+    }
+});
+
+// Obtener historial de arqueos
+app.get('/api/arqueo/historial', authenticateToken, async (req, res) => {
+    try {
+        const [arqueos] = await pool.query(`
+            SELECT 
+                ac.*,
+                u.username
+            FROM arqueo_caja ac
+            INNER JOIN usuarios u ON ac.usuario_id = u.id
+            ORDER BY ac.fecha DESC
+            LIMIT 10
+        `);
+
+        res.json(arqueos);
+    } catch (error) {
+        console.error('Error al obtener historial de arqueos:', error);
+        res.status(500).json({ error: 'Error al obtener historial' });
+    }
+});
+
+// Obtener detalle de un arqueo específico
+app.get('/api/arqueo/:id', authenticateToken, async (req, res) => {
+    try {
+        const [arqueos] = await pool.query(`
+            SELECT 
+                ac.*,
+                u.username
+            FROM arqueo_caja ac
+            INNER JOIN usuarios u ON ac.usuario_id = u.id
+            WHERE ac.id = ?
+        `, [req.params.id]);
+
+        if (arqueos.length === 0) {
+            return res.status(404).json({ error: 'Arqueo no encontrado' });
+        }
+
+        res.json(arqueos[0]);
+    } catch (error) {
+        console.error('Error al obtener arqueo:', error);
+        res.status(500).json({ error: 'Error al obtener arqueo' });
+    }
+});
+
 // ==================== RUTAS DE ARCHIVOS HTML ====================
 
 app.get('/', (req, res) => {

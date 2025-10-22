@@ -3,8 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Contable</title>
+    <title>Sistema Contable - Panel Principal</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(123, 31, 162, 0.2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            font-size: 35px;
+            opacity: 0.8;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #7b1fa2;
+            margin: 10px 0;
+        }
+
+        .stat-description {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .quick-actions {
+            margin-top: 40px;
+        }
+
+        .quick-actions h3 {
+            color: #7b1fa2;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .action-card {
+            background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+            padding: 25px;
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(123, 31, 162, 0.3);
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(123, 31, 162, 0.5);
+        }
+
+        .action-card h4 {
+            color: white;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .action-card p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+        }
+
+        .recent-activity {
+            margin-top: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .recent-activity h3 {
+            color: #7b1fa2;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .activity-item {
+            padding: 15px;
+            border-left: 3px solid #7b1fa2;
+            background: #f8f9fa;
+            margin-bottom: 12px;
+            border-radius: 5px;
+        }
+
+        .activity-date {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .activity-description {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .welcome-banner {
+            background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .welcome-banner h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-banner p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard">
@@ -26,46 +191,52 @@
             <a href="balanza.html" class="nav-btn">Balanza de Comprobación</a>
             <a href="balance.html" class="nav-btn">Balance General</a>
             <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+            <a href="arqueo.html" class="nav-btn">Arqueo de Caja</a>
         </aside>
 
         <main class="content">
             <section class="section active">
-                <div class="welcome-section">
-                    <h2 class="welcome-title">Sistema de Gestión Contable</h2>
-                    <p class="welcome-description">
-                        Cruz Córdova María Fernanda
-                    </p>
-                    
-                    <div class="features-grid">
-                        <a href="movimientos.html" class="feature-card">
-                            <h4>Registrar Movimientos</h4>
-                            <p>Crea y gestiona asientos contables de forma rápida y precisa</p>
-                        </a>
-                        
-                        <a href="diario.html" class="feature-card">
-                            <h4>Libro Diario</h4>
-                            <p>Consulta el registro cronológico de todas tus operaciones</p>
-                        </a>
-                        
-                        <a href="mayor.html" class="feature-card">
-                            <h4>Libro Mayor</h4>
-                            <p>Revisa el detalle de movimientos por cada cuenta contable</p>
-                        </a>
-                        
-                        <a href="balanza.html" class="feature-card">
-                            <h4>Balanza de Comprobación</h4>
-                            <p>Verifica que tus registros estén correctamente balanceados</p>
-                        </a>
-                        
-                        <a href="balance.html" class="feature-card">
-                            <h4>Balance General</h4>
-                            <p>Conoce la situación financiera de tu empresa</p>
-                        </a>
-                        
-                        <a href="resultados.html" class="feature-card">
-                            <h4>Estado de Resultados</h4>
-                            <p>Analiza la rentabilidad y desempeño del negocio</p>
-                        </a>
+                <div class="welcome-banner">
+                    <h2>Bienvenido al Sistema Contable</h2>
+                    <p>Cruz Córdova María Fernanda</p>
+                </div>
+
+                <!-- Estadísticas Principales -->
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-icon">💰</span>
+                            <span class="stat-label">Total Activos</span>
+                        </div>
+                        <div class="stat-value" id="totalActivos">Cargando...</div>
+                        <div class="stat-description">Suma de todos los activos</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-icon">💵</span>
+                            <span class="stat-label">Efectivo en Caja</span>
+                        </div>
+                        <div class="stat-value" id="efectivoCaja">Cargando...</div>
+                        <div class="stat-description">Saldo actual disponible</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-icon">📊</span>
+                            <span class="stat-label">Utilidad Neta</span>
+                        </div>
+                        <div class="stat-value" id="utilidadNeta">Cargando...</div>
+                        <div class="stat-description">Resultado del ejercicio</div>
+                    </div>
+                </div>
+
+
+                <!-- Actividad Reciente -->
+                <div class="recent-activity">
+                    <h3>📋 Movimientos Recientes</h3>
+                    <div id="actividadReciente">
+                        <div class="loading">Cargando actividad reciente...</div>
                     </div>
                 </div>
             </section>
@@ -73,6 +244,8 @@
     </div>
 
     <script>
+        const API_BASE = '/api';
+
         document.addEventListener('DOMContentLoaded', async function() {
             const token = localStorage.getItem('auth_token');
             if (!token) {
@@ -81,16 +254,18 @@
             }
 
             try {
-                const response = await fetch('/api/auth/verify', {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (!response.ok) {
-                    throw new Error('Token inválido');
-                }
+                if (!response.ok) throw new Error('Token inválido');
 
                 const userData = JSON.parse(localStorage.getItem('user_data'));
                 document.getElementById('username').textContent = userData.username;
+
+                // Cargar datos del dashboard
+                await cargarEstadisticas();
+                await cargarActividadReciente();
             } catch (error) {
                 console.error('Error de autenticación:', error);
                 localStorage.removeItem('auth_token');
@@ -99,10 +274,100 @@
             }
         });
 
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
         function logout() {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');
             window.location.href = '/';
+        }
+
+        async function cargarEstadisticas() {
+            try {
+                // Total Activos
+                const balanceResponse = await fetchWithAuth(`${API_BASE}/balance-general`);
+                const balance = await balanceResponse.json();
+                
+                const totalActivos = balance.activo.circulante.reduce((sum, c) => sum + c.saldo, 0) +
+                                    balance.activo.no_circulante.reduce((sum, c) => sum + c.saldo, 0);
+                
+                document.getElementById('totalActivos').textContent = `$${totalActivos.toFixed(2)}`;
+
+                // Efectivo en Caja
+                const cajaResponse = await fetchWithAuth(`${API_BASE}/arqueo/saldo-caja`);
+                const cajaData = await cajaResponse.json();
+                document.getElementById('efectivoCaja').textContent = `$${cajaData.saldo.toFixed(2)}`;
+
+                // Utilidad Neta
+                const resultadosResponse = await fetchWithAuth(`${API_BASE}/estado-resultados`);
+                const resultados = await resultadosResponse.json();
+                document.getElementById('utilidadNeta').textContent = `$${resultados.utilidad_neta.toFixed(2)}`;
+
+                // Total Movimientos
+                const asientosResponse = await fetchWithAuth(`${API_BASE}/asientos`);
+                const asientos = await asientosResponse.json();
+                document.getElementById('totalMovimientos').textContent = asientos.length;
+
+            } catch (error) {
+                console.error('Error al cargar estadísticas:', error);
+                document.getElementById('totalActivos').textContent = 'Error';
+                document.getElementById('efectivoCaja').textContent = 'Error';
+                document.getElementById('utilidadNeta').textContent = 'Error';
+                document.getElementById('totalMovimientos').textContent = 'Error';
+            }
+        }
+
+        async function cargarActividadReciente() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/asientos`);
+                const asientos = await response.json();
+                
+                const container = document.getElementById('actividadReciente');
+                
+                if (asientos.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">No hay movimientos registrados</p>';
+                    return;
+                }
+
+                const recientes = asientos.slice(0, 5);
+                
+                container.innerHTML = recientes.map(asiento => {
+                    const fecha = new Date(asiento.fecha).toLocaleDateString('es-MX', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    
+                    return `
+                        <div class="activity-item">
+                            <div class="activity-date">${fecha}</div>
+                            <div class="activity-description">
+                                <strong>Asiento #${asiento.numero_asiento}:</strong> ${asiento.concepto}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error al cargar actividad:', error);
+                document.getElementById('actividadReciente').innerHTML = 
+                    '<p style="text-align: center; color: red;">Error al cargar actividad reciente</p>';
+            }
         }
     </script>
 </body>

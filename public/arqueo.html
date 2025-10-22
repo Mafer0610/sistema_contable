@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arqueo de Caja</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .arqueo-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .arqueo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .saldo-sistema {
+            background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            grid-column: span 2;
+            box-shadow: 0 4px 15px rgba(123, 31, 162, 0.3);
+        }
+
+        .saldo-sistema h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .saldo-sistema .monto {
+            font-size: 42px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .denominacion-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .denominacion-section h3 {
+            color: #7b1fa2;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #7b1fa2;
+            padding-bottom: 10px;
+        }
+
+        .denominacion-item {
+            display: grid;
+            grid-template-columns: 120px 80px 1fr;
+            gap: 15px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .denominacion-item:last-child {
+            border-bottom: none;
+        }
+
+        .denominacion-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .denominacion-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .denominacion-input:focus {
+            outline: none;
+            border-color: #7b1fa2;
+        }
+
+        .denominacion-subtotal {
+            text-align: right;
+            font-weight: 600;
+            color: #7b1fa2;
+            font-size: 16px;
+        }
+
+        .totales-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 30px;
+            grid-column: span 2;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        .total-row.destacado {
+            background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .total-row.diferencia {
+            background: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .total-row.diferencia.positiva {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .total-row.diferencia.negativa {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .observaciones-section {
+            grid-column: span 2;
+            margin-top: 20px;
+        }
+
+        .observaciones-section textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .observaciones-section textarea:focus {
+            outline: none;
+            border-color: #7b1fa2;
+        }
+
+        .acciones-section {
+            grid-column: span 2;
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-guardar {
+            flex: 1;
+            padding: 15px;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-guardar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-limpiar {
+            padding: 15px 30px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-limpiar:hover {
+            background: #d32f2f;
+        }
+
+        .historial-section {
+            grid-column: span 2;
+            margin-top: 40px;
+        }
+
+        .historial-section h3 {
+            color: #7b1fa2;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .historial-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .historial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .historial-fecha {
+            font-weight: 600;
+            color: #7b1fa2;
+            font-size: 16px;
+        }
+
+        .historial-resumen {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .historial-dato {
+            text-align: center;
+        }
+
+        .historial-dato label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .historial-dato span {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .arqueo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .saldo-sistema,
+            .totales-section,
+            .observaciones-section,
+            .acciones-section,
+            .historial-section {
+                grid-column: span 1;
+            }
+
+            .denominacion-item {
+                grid-template-columns: 100px 60px 1fr;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Sky Home S. A.</h1>
+                <div class="user-info">
+                    <span id="username">Usuario</span>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <a href="panel.html" class="nav-btn">Inicio</a>
+            <a href="movimientos.html" class="nav-btn">Agregar Movimiento</a>
+            <a href="diario.html" class="nav-btn">Libro Diario</a>
+            <a href="mayor.html" class="nav-btn">Libro Mayor</a>
+            <a href="balanza.html" class="nav-btn">Balanza de Comprobación</a>
+            <a href="balance.html" class="nav-btn">Balance General</a>
+            <a href="resultados.html" class="nav-btn">Estado de Resultados</a>
+            <a href="arqueo.html" class="nav-btn active">Arqueo de Caja</a>
+        </aside>
+
+        <main class="content">
+            <section class="section active">
+                <div class="arqueo-container">
+                    <h2>Arqueo de Caja</h2>
+
+                    <div class="arqueo-grid">
+                        <div class="saldo-sistema">
+                            <h3>Saldo en Sistema</h3>
+                            <div class="monto" id="saldoSistema">$0.00</div>
+                        </div>
+
+                        <!-- Billetes -->
+                        <div class="denominacion-section">
+                            <h3>Billetes</h3>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$1,000</span>
+                                <input type="number" class="denominacion-input" id="billetes_1000" min="0" value="0" data-valor="1000">
+                                <span class="denominacion-subtotal" id="subtotal_1000">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$500</span>
+                                <input type="number" class="denominacion-input" id="billetes_500" min="0" value="0" data-valor="500">
+                                <span class="denominacion-subtotal" id="subtotal_500">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$200</span>
+                                <input type="number" class="denominacion-input" id="billetes_200" min="0" value="0" data-valor="200">
+                                <span class="denominacion-subtotal" id="subtotal_200">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$100</span>
+                                <input type="number" class="denominacion-input" id="billetes_100" min="0" value="0" data-valor="100">
+                                <span class="denominacion-subtotal" id="subtotal_100">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$50</span>
+                                <input type="number" class="denominacion-input" id="billetes_50" min="0" value="0" data-valor="50">
+                                <span class="denominacion-subtotal" id="subtotal_50">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$20</span>
+                                <input type="number" class="denominacion-input" id="billetes_20" min="0" value="0" data-valor="20">
+                                <span class="denominacion-subtotal" id="subtotal_20">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Monedas -->
+                        <div class="denominacion-section">
+                            <h3>Monedas</h3>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$20</span>
+                                <input type="number" class="denominacion-input" id="monedas_20" min="0" value="0" data-valor="20">
+                                <span class="denominacion-subtotal" id="subtotal_m20">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$10</span>
+                                <input type="number" class="denominacion-input" id="monedas_10" min="0" value="0" data-valor="10">
+                                <span class="denominacion-subtotal" id="subtotal_m10">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$5</span>
+                                <input type="number" class="denominacion-input" id="monedas_5" min="0" value="0" data-valor="5">
+                                <span class="denominacion-subtotal" id="subtotal_m5">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$2</span>
+                                <input type="number" class="denominacion-input" id="monedas_2" min="0" value="0" data-valor="2">
+                                <span class="denominacion-subtotal" id="subtotal_m2">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$1</span>
+                                <input type="number" class="denominacion-input" id="monedas_1" min="0" value="0" data-valor="1">
+                                <span class="denominacion-subtotal" id="subtotal_m1">$0.00</span>
+                            </div>
+                            <div class="denominacion-item">
+                                <span class="denominacion-label">$0.50</span>
+                                <input type="number" class="denominacion-input" id="monedas_050c" min="0" value="0" data-valor="0.5">
+                                <span class="denominacion-subtotal" id="subtotal_m050">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Totales -->
+                        <div class="totales-section">
+                            <div class="total-row">
+                                <span>Total Físico:</span>
+                                <span id="totalFisico">$0.00</span>
+                            </div>
+                            <div class="total-row destacado">
+                                <span>Saldo Sistema:</span>
+                                <span id="saldoSistemaTotal">$0.00</span>
+                            </div>
+                            <div class="total-row diferencia" id="diferenciaRow">
+                                <span>Diferencia:</span>
+                                <span id="diferencia">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="observaciones-section">
+                            <label style="display: block; margin-bottom: 10px; color: #7b1fa2; font-weight: 600;">
+                                📝 Observaciones (opcional)
+                            </label>
+                            <textarea id="observaciones" placeholder="Escribe aquí cualquier observación sobre el arqueo..."></textarea>
+                        </div>
+
+                        <!-- Acciones -->
+                        <div class="acciones-section">
+                            <button class="btn-guardar" onclick="guardarArqueo()">
+                                Guardar Arqueo
+                            </button>
+                            <button class="btn-limpiar" onclick="limpiarFormulario()">
+                                Limpiar
+                            </button>
+                        </div>
+
+                        <!-- Historial -->
+                        <div class="historial-section">
+                            <h3>📋 Historial de Arqueos</h3>
+                            <div id="historialContainer">
+                                <p style="text-align: center; color: #666;">Cargando historial...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let saldoSistema = 0;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Token inválido');
+
+                const userData = JSON.parse(localStorage.getItem('user_data'));
+                document.getElementById('username').textContent = userData.username;
+
+                await cargarSaldoSistema();
+                await cargarHistorial();
+                configurarEventListeners();
+            } catch (error) {
+                console.error('Error de autenticación:', error);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+            }
+        });
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem('auth_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/';
+                throw new Error('Sesión expirada');
+            }
+            return response;
+        }
+
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/';
+        }
+
+        async function cargarSaldoSistema() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/arqueo/saldo-caja`);
+                const data = await response.json();
+                saldoSistema = data.saldo;
+                document.getElementById('saldoSistema').textContent = `$${saldoSistema.toFixed(2)}`;
+                document.getElementById('saldoSistemaTotal').textContent = `$${saldoSistema.toFixed(2)}`;
+                calcularTotales();
+            } catch (error) {
+                console.error('Error al cargar saldo:', error);
+                alert('Error al cargar el saldo del sistema');
+            }
+        }
+
+        function configurarEventListeners() {
+            const inputs = document.querySelectorAll('.denominacion-input');
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    const valor = parseFloat(this.dataset.valor);
+                    const cantidad = parseInt(this.value) || 0;
+                    const subtotal = valor * cantidad;
+                    
+                    const subtotalId = this.id.replace('billetes_', 'subtotal_').replace('monedas_', 'subtotal_m');
+                    document.getElementById(subtotalId).textContent = `$${subtotal.toFixed(2)}`;
+                    
+                    calcularTotales();
+                });
+            });
+        }
+
+        function calcularTotales() {
+            const inputs = document.querySelectorAll('.denominacion-input');
+            let totalFisico = 0;
+
+            inputs.forEach(input => {
+                const valor = parseFloat(input.dataset.valor);
+                const cantidad = parseInt(input.value) || 0;
+                totalFisico += valor * cantidad;
+            });
+
+            document.getElementById('totalFisico').textContent = `$${totalFisico.toFixed(2)}`;
+            
+            const diferencia = totalFisico - saldoSistema;
+            document.getElementById('diferencia').textContent = `$${diferencia.toFixed(2)}`;
+            
+            const diferenciaRow = document.getElementById('diferenciaRow');
+            diferenciaRow.className = 'total-row diferencia';
+            
+            if (Math.abs(diferencia) < 0.01) {
+                diferenciaRow.classList.add('positiva');
+            } else if (diferencia > 0) {
+                diferenciaRow.classList.add('positiva');
+            } else {
+                diferenciaRow.classList.add('negativa');
+            }
+        }
+
+        async function guardarArqueo() {
+            try {
+                const inputs = document.querySelectorAll('.denominacion-input');
+                const datos = {
+                    saldo_sistema: saldoSistema,
+                    observaciones: document.getElementById('observaciones').value
+                };
+
+                inputs.forEach(input => {
+                    datos[input.id] = parseInt(input.value) || 0;
+                });
+
+                const totalFisico = parseFloat(document.getElementById('totalFisico').textContent.replace('$', ''));
+                datos.total_fisico = totalFisico;
+                datos.diferencia = totalFisico - saldoSistema;
+
+                const response = await fetchWithAuth(`${API_BASE}/arqueo`, {
+                    method: 'POST',
+                    body: JSON.stringify(datos)
+                });
+
+                if (response.ok) {
+                    alert('✅ Arqueo guardado exitosamente');
+                    limpiarFormulario();
+                    await cargarHistorial();
+                } else {
+                    const error = await response.json();
+                    alert(`❌ Error: ${error.error}`);
+                }
+            } catch (error) {
+                console.error('Error al guardar arqueo:', error);
+                alert('❌ Error al guardar el arqueo');
+            }
+        }
+
+        function limpiarFormulario() {
+            const inputs = document.querySelectorAll('.denominacion-input');
+            inputs.forEach(input => {
+                input.value = 0;
+            });
+            document.getElementById('observaciones').value = '';
+            calcularTotales();
+        }
+
+        async function cargarHistorial() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/arqueo/historial`);
+                const historial = await response.json();
+                
+                const container = document.getElementById('historialContainer');
+                
+                if (historial.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">No hay arqueos registrados</p>';
+                    return;
+                }
+
+                container.innerHTML = historial.map(arqueo => {
+                    const fecha = new Date(arqueo.fecha).toLocaleString('es-MX');
+                    
+                    // Convertir a números
+                    const saldoSistema = parseFloat(arqueo.saldo_sistema) || 0;
+                    const totalFisico = parseFloat(arqueo.total_fisico) || 0;
+                    const diferencia = parseFloat(arqueo.diferencia) || 0;
+                    
+                    const diferenciaClase = Math.abs(diferencia) < 0.01 ? 'positiva' : 
+                                        diferencia > 0 ? 'positiva' : 'negativa';
+                    
+                    // Preparar detalles de billetes (solo mostrar los que tienen cantidad)
+                    const billetes = [];
+                    if (arqueo.billetes_1000 > 0) billetes.push(`$1,000 (${arqueo.billetes_1000})`);
+                    if (arqueo.billetes_500 > 0) billetes.push(`$500 (${arqueo.billetes_500})`);
+                    if (arqueo.billetes_200 > 0) billetes.push(`$200 (${arqueo.billetes_200})`);
+                    if (arqueo.billetes_100 > 0) billetes.push(`$100 (${arqueo.billetes_100})`);
+                    if (arqueo.billetes_50 > 0) billetes.push(`$50 (${arqueo.billetes_50})`);
+                    if (arqueo.billetes_20 > 0) billetes.push(`$20 (${arqueo.billetes_20})`);
+                    
+                    // Preparar detalles de monedas
+                    const monedas = [];
+                    if (arqueo.monedas_20 > 0) monedas.push(`$20 (${arqueo.monedas_20})`);
+                    if (arqueo.monedas_10 > 0) monedas.push(`$10 (${arqueo.monedas_10})`);
+                    if (arqueo.monedas_5 > 0) monedas.push(`$5 (${arqueo.monedas_5})`);
+                    if (arqueo.monedas_2 > 0) monedas.push(`$2 (${arqueo.monedas_2})`);
+                    if (arqueo.monedas_1 > 0) monedas.push(`$1 (${arqueo.monedas_1})`);
+                    if (arqueo.monedas_050c > 0) monedas.push(`$0.50 (${arqueo.monedas_050c})`);
+                    
+                    return `
+                        <div class="historial-item">
+                            <div class="historial-header">
+                                <span class="historial-fecha">📅 ${fecha}</span>
+                                <button class="btn-toggle-detalle" onclick="toggleDetalle(${arqueo.id})" style="background: #7b1fa2; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                    Ver Detalle
+                                </button>
+                            </div>
+                            <div class="historial-resumen">
+                                <div class="historial-dato">
+                                    <label>Saldo Sistema</label>
+                                    <span>$${saldoSistema.toFixed(2)}</span>
+                                </div>
+                                <div class="historial-dato">
+                                    <label>Total Físico</label>
+                                    <span>$${totalFisico.toFixed(2)}</span>
+                                </div>
+                                <div class="historial-dato">
+                                    <label>Diferencia</label>
+                                    <span style="color: ${diferenciaClase === 'positiva' && diferencia !== 0 ? '#155724' : diferenciaClase === 'negativa' ? '#721c24' : '#333'}">
+                                        $${diferencia.toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div id="detalle-${arqueo.id}" class="historial-detalle" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+                                    <div>
+                                        <h4 style="color: #7b1fa2; margin-bottom: 10px; font-size: 16px;">💵 Billetes</h4>
+                                        ${billetes.length > 0 ? 
+                                            `<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                                ${billetes.map(b => `<span style="background: #e3f2fd; padding: 5px 12px; border-radius: 15px; font-size: 13px;">${b}</span>`).join('')}
+                                            </div>` 
+                                            : '<p style="color: #999; font-size: 13px;">Sin billetes registrados</p>'}
+                                    </div>
+                                    <div>
+                                        <h4 style="color: #7b1fa2; margin-bottom: 10px; font-size: 16px;">🪙 Monedas</h4>
+                                        ${monedas.length > 0 ? 
+                                            `<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                                ${monedas.map(m => `<span style="background: #fff3cd; padding: 5px 12px; border-radius: 15px; font-size: 13px;">${m}</span>`).join('')}
+                                            </div>` 
+                                            : '<p style="color: #999; font-size: 13px;">Sin monedas registradas</p>'}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${arqueo.observaciones ? `<p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; color: #666; font-size: 14px;"><strong>Observaciones:</strong> ${arqueo.observaciones}</p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error al cargar historial:', error);
+                document.getElementById('historialContainer').innerHTML = 
+                    '<p style="text-align: center; color: red;">Error al cargar el historial</p>';
+            }
+        }
+
+        function toggleDetalle(id) {
+            const detalle = document.getElementById(`detalle-${id}`);
+            const button = event.target;
+            
+            if (detalle.style.display === 'none') {
+                detalle.style.display = 'block';
+                button.textContent = 'Ocultar Detalle';
+                button.style.background = '#f44336';
+            } else {
+                detalle.style.display = 'none';
+                button.textContent = 'Ver Detalle';
+                button.style.background = '#7b1fa2';
+            }
+        }
+    </script>
+</body>
+</html>

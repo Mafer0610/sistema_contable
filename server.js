@@ -318,7 +318,6 @@ app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
 });
 
 // ==================== RUTAS DE BALANZA ====================
-
 app.get('/api/balanza', authenticateToken, async (req, res) => {
     try {
         const [balanza] = await pool.query(`
@@ -363,7 +362,6 @@ app.get('/api/balanza', authenticateToken, async (req, res) => {
 });
 
 // ==================== BALANCE GENERAL ====================
-
 app.get('/api/balance-general', authenticateToken, async (req, res) => {
     try {
         const [cuentas] = await pool.query(`
@@ -428,7 +426,6 @@ app.get('/api/balance-general', authenticateToken, async (req, res) => {
 });
 
 // ==================== ESTADO DE RESULTADOS ====================
-
 app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
     try {
         // INVENTARIO INICIAL: Primer movimiento de inventario en el Debe
@@ -602,8 +599,6 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
 });
 
 // ==================== RUTAS DE ARQUEO DE CAJA ====================
-
-// Obtener saldo actual de la cuenta Caja
 app.get('/api/arqueo/saldo-caja', authenticateToken, async (req, res) => {
     try {
         const [result] = await pool.query(`

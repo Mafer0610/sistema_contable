@@ -17,7 +17,7 @@ body {
     align-items: center;
     min-height: 100vh;
     padding: 20px;
-    background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+    background: #D1A9FB; /* Color de fondo actualizado */
 }
 
 .login-container {
@@ -31,7 +31,7 @@ body {
 
 .logo h1 {
     text-align: center;
-    color: #7b1fa2;
+    color: #5E2771; /* Color de letras actualizado */
     margin-bottom: 30px;
     font-size: 28px;
 }
@@ -63,7 +63,7 @@ body {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #333;
+    color: #5E2771; /* Color de letras actualizado */
     font-weight: 500;
     font-size: 14px;
 }
@@ -75,11 +75,12 @@ body {
     border-radius: 8px;
     font-size: 14px;
     transition: border-color 0.3s;
+    color: #333;
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: #7b1fa2;
+    border-color: #5E2771;
 }
 
 .btn {
@@ -94,13 +95,14 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);
+    background: #7B4793; /* Color de botón actualizado */
     color: white;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(123, 31, 162, 0.4);
+    box-shadow: 0 5px 15px rgba(123, 71, 147, 0.4);
+    background: #6A3A81;
 }
 
 .btn-primary:disabled {
@@ -115,13 +117,13 @@ body {
 }
 
 .form-footer p {
-    color: #666;
+    color: #5E2771; /* Color de letras actualizado */
     font-size: 14px;
     margin-bottom: 10px;
 }
 
 .form-footer a {
-    color: #7b1fa2;
+    color: #7B4793;
     text-decoration: none;
     font-weight: 600;
 }
@@ -136,6 +138,7 @@ body {
     background: #f8f9fa;
     border-radius: 8px;
     font-size: 13px;
+    color: #5E2771;
 }
 
 /* ==================== DASHBOARD ==================== */

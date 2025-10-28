@@ -1,8 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const path = require('path');
 const cors = require('cors');
 
@@ -45,106 +43,9 @@ pool.getConnection()
         console.error('❌ Error al conectar a la base de datos:', err);
     });
 
-// Middleware de autenticación
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ error: 'Token no proporcionado' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Token inválido' });
-        }
-        req.user = user;
-        next();
-    });
-};
-
-// ==================== RUTAS DE AUTENTICACIÓN ====================
-
-app.post('/api/auth/register', async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
-    }
-
-    if (username.length < 3) {
-        return res.status(400).json({ error: 'El usuario debe tener al menos 3 caracteres' });
-    }
-
-    if (password.length < 6) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
-    }
-
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await pool.query(
-            'INSERT INTO usuarios (username, password) VALUES (?, ?)',
-            [username, hashedPassword]
-        );
-
-        res.status(201).json({ message: 'Usuario registrado exitosamente' });
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'El usuario ya existe' });
-        }
-        console.error('Error en registro:', error);
-        res.status(500).json({ error: 'Error al registrar usuario' });
-    }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-    const { username, password } = req.body;
-
-
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
-    }
-
-    try {
-        const [users] = await pool.query(
-            'SELECT * FROM usuarios WHERE username = ?',
-            [username]
-        );
-
-        if (users.length === 0) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
-        }
-
-        const user = users[0];
-        const validPassword = await bcrypt.compare(password, user.password);
-
-        if (!validPassword) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
-        }
-
-        const token = jwt.sign(
-            { id: user.id, username: user.username },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        res.json({
-            token,
-            user: { id: user.id, username: user.username }
-        });
-    } catch (error) {
-        console.error('Error en login:', error);
-        res.status(500).json({ error: 'Error al iniciar sesión' });
-    }
-});
-
-app.get('/api/auth/verify', authenticateToken, (req, res) => {
-    res.json({ valid: true, user: req.user });
-});
-
 // ==================== RUTAS DE CATÁLOGO DE CUENTAS ====================
 
-app.get('/api/cuentas', authenticateToken, async (req, res) => {
+app.get('/api/cuentas', async (req, res) => {
     try {
         const [cuentas] = await pool.query(
             'SELECT * FROM catalogo_cuentas WHERE activa = TRUE ORDER BY codigo'
@@ -158,7 +59,7 @@ app.get('/api/cuentas', authenticateToken, async (req, res) => {
 
 // ==================== RUTAS DE LIBRO DIARIO ====================
 
-app.post('/api/asientos', authenticateToken, async (req, res) => {
+app.post('/api/asientos', async (req, res) => {
     const { fecha, concepto, movimientos } = req.body;
 
     if (!fecha || !concepto || !movimientos || movimientos.length === 0) {
@@ -214,7 +115,7 @@ app.post('/api/asientos', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/asientos', authenticateToken, async (req, res) => {
+app.get('/api/asientos', async (req, res) => {
     try {
         const [asientos] = await pool.query(`
             SELECT 
@@ -264,7 +165,7 @@ app.get('/api/asientos', authenticateToken, async (req, res) => {
 
 // ==================== RUTAS DE LIBRO MAYOR ====================
 
-app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
+app.get('/api/libro-mayor', async (req, res) => {
     try {
         const [cuentas] = await pool.query(`
             SELECT DISTINCT cc.id, cc.codigo, cc.nombre
@@ -318,7 +219,7 @@ app.get('/api/libro-mayor', authenticateToken, async (req, res) => {
 });
 
 // ==================== RUTAS DE BALANZA ====================
-app.get('/api/balanza', authenticateToken, async (req, res) => {
+app.get('/api/balanza', async (req, res) => {
     try {
         const [balanza] = await pool.query(`
             SELECT 
@@ -362,7 +263,7 @@ app.get('/api/balanza', authenticateToken, async (req, res) => {
 });
 
 // ==================== BALANCE GENERAL ====================
-app.get('/api/balance-general', authenticateToken, async (req, res) => {
+app.get('/api/balance-general', async (req, res) => {
     try {
         const [cuentas] = await pool.query(`
             SELECT 
@@ -426,7 +327,7 @@ app.get('/api/balance-general', authenticateToken, async (req, res) => {
 });
 
 // ==================== ESTADO DE RESULTADOS ====================
-app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
+app.get('/api/estado-resultados', async (req, res) => {
     try {
         // INVENTARIO INICIAL: Primer movimiento de inventario en el Debe
         const [primerInventario] = await pool.query(`
@@ -599,7 +500,7 @@ app.get('/api/estado-resultados', authenticateToken, async (req, res) => {
 });
 
 // ==================== RUTAS DE ARQUEO DE CAJA ====================
-app.get('/api/arqueo/saldo-caja', authenticateToken, async (req, res) => {
+app.get('/api/arqueo/saldo-caja', async (req, res) => {
     try {
         const [result] = await pool.query(`
             SELECT 
@@ -618,7 +519,7 @@ app.get('/api/arqueo/saldo-caja', authenticateToken, async (req, res) => {
 });
 
 // Guardar arqueo de caja
-app.post('/api/arqueo', authenticateToken, async (req, res) => {
+app.post('/api/arqueo', async (req, res) => {
     const {
         saldo_sistema,
         billetes_1000, billetes_500, billetes_200, billetes_100, billetes_50, billetes_20,
@@ -651,7 +552,7 @@ app.post('/api/arqueo', authenticateToken, async (req, res) => {
 });
 
 // Obtener historial de arqueos
-app.get('/api/arqueo/historial', authenticateToken, async (req, res) => {
+app.get('/api/arqueo/historial', async (req, res) => {
     try {
         const [arqueos] = await pool.query(`
             SELECT 
@@ -671,7 +572,7 @@ app.get('/api/arqueo/historial', authenticateToken, async (req, res) => {
 });
 
 // Obtener detalle de un arqueo específico
-app.get('/api/arqueo/:id', authenticateToken, async (req, res) => {
+app.get('/api/arqueo/:id', async (req, res) => {
     try {
         const [arqueos] = await pool.query(`
             SELECT 
@@ -697,10 +598,6 @@ app.get('/api/arqueo/:id', authenticateToken, async (req, res) => {
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
 app.get('/panel', (req, res) => {

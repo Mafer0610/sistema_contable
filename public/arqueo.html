@@ -281,8 +281,7 @@
             <div class="header-content">
                 <h1>Sky Home S. A.</h1>
                 <div class="user-info">
-                    <span id="username">Usuario</span>
-                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                    <span>Sistema Contable</span>
                 </div>
             </div>
         </header>
@@ -431,54 +430,17 @@
         let saldoSistema = 0;
 
         document.addEventListener('DOMContentLoaded', async function() {
-            const token = localStorage.getItem('auth_token');
-            if (!token) {
-                window.location.href = '/';
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/auth/verify`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) throw new Error('Token inválido');
-
-                const userData = JSON.parse(localStorage.getItem('user_data'));
-                document.getElementById('username').textContent = userData.username;
-
-                await cargarSaldoSistema();
-                await cargarHistorial();
-                configurarEventListeners();
-            } catch (error) {
-                console.error('Error de autenticación:', error);
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('user_data');
-                window.location.href = '/';
-            }
+            await cargarSaldoSistema();
+            await cargarHistorial();
+            configurarEventListeners();
         });
 
         async function fetchWithAuth(url, options = {}) {
-            const token = localStorage.getItem('auth_token');
             const headers = {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
                 ...options.headers
             };
-            const response = await fetch(url, { ...options, headers });
-            if (response.status === 401 || response.status === 403) {
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('user_data');
-                window.location.href = '/';
-                throw new Error('Sesión expirada');
-            }
-            return response;
-        }
-
-        function logout() {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-            window.location.href = '/';
+            return await fetch(url, { ...options, headers });
         }
 
         async function cargarSaldoSistema() {
@@ -597,7 +559,6 @@
                 container.innerHTML = historial.map(arqueo => {
                     const fecha = new Date(arqueo.fecha).toLocaleString('es-MX');
                     
-                    // Convertir a números
                     const saldoSistema = parseFloat(arqueo.saldo_sistema) || 0;
                     const totalFisico = parseFloat(arqueo.total_fisico) || 0;
                     const diferencia = parseFloat(arqueo.diferencia) || 0;
@@ -605,7 +566,6 @@
                     const diferenciaClase = Math.abs(diferencia) < 0.01 ? 'positiva' : 
                                         diferencia > 0 ? 'positiva' : 'negativa';
                     
-                    // Preparar detalles de billetes (solo mostrar los que tienen cantidad)
                     const billetes = [];
                     if (arqueo.billetes_1000 > 0) billetes.push(`$1,000 (${arqueo.billetes_1000})`);
                     if (arqueo.billetes_500 > 0) billetes.push(`$500 (${arqueo.billetes_500})`);
@@ -614,7 +574,6 @@
                     if (arqueo.billetes_50 > 0) billetes.push(`$50 (${arqueo.billetes_50})`);
                     if (arqueo.billetes_20 > 0) billetes.push(`$20 (${arqueo.billetes_20})`);
                     
-                    // Preparar detalles de monedas
                     const monedas = [];
                     if (arqueo.monedas_20 > 0) monedas.push(`$20 (${arqueo.monedas_20})`);
                     if (arqueo.monedas_10 > 0) monedas.push(`$10 (${arqueo.monedas_10})`);

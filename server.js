@@ -37,11 +37,20 @@ const pool = mysql.createPool({
 // Verificar conexión
 pool.getConnection()
     .then(connection => {
+        console.log('✅ Conexión a la base de datos establecida');
         connection.release();
     })
     .catch(err => {
         console.error('❌ Error al conectar a la base de datos:', err);
     });
+
+// ==================== MIDDLEWARE DE USUARIO POR DEFECTO ====================
+// Como no tienes autenticación, usamos un usuario por defecto
+app.use((req, res, next) => {
+    // Buscar o crear un usuario por defecto
+    req.user = { id: 1 }; // Usuario ID 1 por defecto
+    next();
+});
 
 // ==================== RUTAS DE CATÁLOGO DE CUENTAS ====================
 
@@ -84,10 +93,10 @@ app.post('/api/asientos', async (req, res) => {
         );
         const numeroMovimiento = result[0].siguiente;
 
-        // Insertar en libro_diario
+        // Insertar en libro_diario (con usuario_id = 1 por defecto)
         const [asientoResult] = await connection.query(
             'INSERT INTO libro_diario (numero_movimiento, fecha, concepto, usuario_id) VALUES (?, ?, ?, ?)',
-            [numeroMovimiento, fecha, concepto, req.user.id]
+            [numeroMovimiento, fecha, concepto, 1] // Usuario ID 1 por defecto
         );
 
         const asientoId = asientoResult.insertId;
@@ -109,7 +118,7 @@ app.post('/api/asientos', async (req, res) => {
     } catch (error) {
         await connection.rollback();
         console.error('Error al crear asiento:', error);
-        res.status(500).json({ error: 'Error al crear asiento' });
+        res.status(500).json({ error: 'Error al crear asiento', detalle: error.message });
     } finally {
         connection.release();
     }
@@ -177,7 +186,6 @@ app.get('/api/libro-mayor', async (req, res) => {
         const libroMayor = [];
 
         for (const cuenta of cuentas) {
-            // Obtener movimientos con el numero_movimiento de libro_diario
             const [movimientos] = await pool.query(`
                 SELECT 
                     ld.numero_movimiento,
@@ -329,7 +337,7 @@ app.get('/api/balance-general', async (req, res) => {
 // ==================== ESTADO DE RESULTADOS ====================
 app.get('/api/estado-resultados', async (req, res) => {
     try {
-        // INVENTARIO INICIAL: Primer movimiento de inventario en el Debe
+        // INVENTARIO INICIAL
         const [primerInventario] = await pool.query(`
             SELECT m.debe as inventario_inicial
             FROM movimientos m
@@ -342,7 +350,7 @@ app.get('/api/estado-resultados', async (req, res) => {
 
         const inventarioInicial = primerInventario.length > 0 ? parseFloat(primerInventario[0].inventario_inicial) : 20000;
 
-        // COMPRAS: Suma total de inventario en el Debe MENOS el inventario inicial
+        // COMPRAS
         const [totalInventarioDebe] = await pool.query(`
             SELECT COALESCE(SUM(m.debe), 0) as total_debe
             FROM movimientos m
@@ -353,10 +361,10 @@ app.get('/api/estado-resultados', async (req, res) => {
         const sumaInventarioDebe = totalInventarioDebe.length > 0 ? parseFloat(totalInventarioDebe[0].total_debe) : 0;
         const compras = sumaInventarioDebe - inventarioInicial;
 
-        // INVENTARIO FINAL: Valor fijo de 17000
+        // INVENTARIO FINAL
         const inventarioFinal = 17000;
 
-        // Obtener VENTAS (solo cuentas de tipo ingreso)
+        // VENTAS
         const [ventasData] = await pool.query(`
             SELECT 
                 cc.nombre,
@@ -386,7 +394,7 @@ app.get('/api/estado-resultados', async (req, res) => {
             }
         });
 
-        // Obtener GASTOS
+        // GASTOS
         const [gastosData] = await pool.query(`
             SELECT 
                 cc.nombre,
@@ -407,7 +415,6 @@ app.get('/api/estado-resultados', async (req, res) => {
             const debe = parseFloat(cuenta.total_debe);
             const haber = parseFloat(cuenta.total_haber);
 
-            // Costo de ventas
             if (cuenta.subtipo === 'costo_ventas') {
                 if (nombre.includes('gasto') && nombre.includes('compra')) {
                     gastosCompra += debe;
@@ -418,44 +425,27 @@ app.get('/api/estado-resultados', async (req, res) => {
                 } else if (nombre.includes('desc') && nombre.includes('compra')) {
                     descCompras += haber;
                 }
-            }
-            // Gastos de operación
-            else if (cuenta.subtipo === 'operacion') {
+            } else if (cuenta.subtipo === 'operacion') {
                 if (nombre.includes('venta')) {
                     gastosVenta += debe;
                 } else {
-                    // Todos los demás gastos de operación van a administración
                     gastosAdmon += debe;
                 }
             }
         });
 
-        // CÁLCULOS EXACTOS según el formato del PDF
-        
-        // 1. VENTAS
+        // CÁLCULOS
         const ventasNetas = ventas - devVentas - rebVentas - descVentas;
-        
-        // 2. COSTO DE VENTAS
         const comprasTotales = compras + gastosCompra;
         const comprasNetas = comprasTotales - descCompras - devCompras - rebCompras;
         const totalMercancias = inventarioInicial + comprasNetas;
         const costoVentas = totalMercancias - inventarioFinal;
-        
-        // 3. UTILIDAD BRUTA
         const utilidadBruta = ventasNetas - costoVentas;
-        
-        // 4. GASTOS DE OPERACIÓN
         const totalGastosOperacion = gastosVenta + gastosAdmon;
-        
-        // 5. UTILIDAD ANTES DE IMPUESTOS
         const utilidadAntesImpuestos = utilidadBruta - totalGastosOperacion;
-        
-        // 6. IMPUESTOS
         const isr = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.30 : 0;
         const ptu = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.10 : 0;
         const totalImpuestos = isr + ptu;
-        
-        // 7. UTILIDAD NETA
         const utilidadNeta = utilidadAntesImpuestos - totalImpuestos;
 
         res.json({
@@ -518,7 +508,6 @@ app.get('/api/arqueo/saldo-caja', async (req, res) => {
     }
 });
 
-// Guardar arqueo de caja
 app.post('/api/arqueo', async (req, res) => {
     const {
         saldo_sistema,
@@ -536,7 +525,8 @@ app.post('/api/arqueo', async (req, res) => {
                 total_fisico, diferencia, observaciones
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            req.user.id, saldo_sistema,
+            1, // Usuario ID 1 por defecto
+            saldo_sistema,
             billetes_1000 || 0, billetes_500 || 0, billetes_200 || 0, 
             billetes_100 || 0, billetes_50 || 0, billetes_20 || 0,
             monedas_20 || 0, monedas_10 || 0, monedas_5 || 0, 
@@ -551,7 +541,6 @@ app.post('/api/arqueo', async (req, res) => {
     }
 });
 
-// Obtener historial de arqueos
 app.get('/api/arqueo/historial', async (req, res) => {
     try {
         const [arqueos] = await pool.query(`
@@ -571,7 +560,6 @@ app.get('/api/arqueo/historial', async (req, res) => {
     }
 });
 
-// Obtener detalle de un arqueo específico
 app.get('/api/arqueo/:id', async (req, res) => {
     try {
         const [arqueos] = await pool.query(`
@@ -607,4 +595,5 @@ app.get('/panel', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log('📊 Sistema Contable - Sky Home S.A.\n');
 });

@@ -414,7 +414,7 @@
 
                         <!-- Historial -->
                         <div class="historial-section">
-                            <h3>📋 Historial de Arqueos</h3>
+                            <h3>Historial de Arqueos</h3>
                             <div id="historialContainer">
                                 <p style="text-align: center; color: #666;">Cargando historial...</p>
                             </div>
@@ -424,6 +424,9 @@
             </section>
         </main>
     </div>
+
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         const API_BASE = '/api';
@@ -585,10 +588,15 @@
                     return `
                         <div class="historial-item">
                             <div class="historial-header">
-                                <span class="historial-fecha">📅 ${fecha}</span>
-                                <button class="btn-toggle-detalle" onclick="toggleDetalle(${arqueo.id})" style="background: #7b1fa2; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-size: 13px;">
-                                    Ver Detalle
-                                </button>
+                                <span class="historial-fecha">${fecha}</span>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn-toggle-detalle" onclick="toggleDetalle(${arqueo.id})" style="background: #7b1fa2; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                        Ver Detalle
+                                    </button>
+                                    <button onclick="descargarPDF(${arqueo.id}, '${fecha}')" style="background: #4caf50; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-size: 13px;">
+                                        PDF
+                                    </button>
+                                </div>
                             </div>
                             <div class="historial-resumen">
                                 <div class="historial-dato">
@@ -651,6 +659,200 @@
                 detalle.style.display = 'none';
                 button.textContent = 'Ver Detalle';
                 button.style.background = '#7b1fa2';
+            }
+        }
+
+        async function descargarPDF(arqueoId, fechaStr) {
+            try {
+                // Obtener datos del arqueo
+                const response = await fetchWithAuth(`${API_BASE}/arqueo/${arqueoId}`);
+                const arqueo = await response.json();
+
+                // Acceder a jsPDF desde window
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Configuración de colores
+                const morado = [123, 31, 162];
+                const gris = [102, 102, 102];
+                const negro = [0, 0, 0];
+
+                // Encabezado
+                doc.setFontSize(20);
+                doc.setTextColor(...morado);
+                doc.setFont(undefined, 'bold');
+                doc.text('Sky Home S. A.', 105, 20, { align: 'center' });
+
+                doc.setFontSize(16);
+                doc.setTextColor(...gris);
+                doc.setFont(undefined, 'normal');
+                doc.text('Arqueo de Caja', 105, 30, { align: 'center' });
+
+                doc.setFontSize(12);
+                doc.text(fechaStr, 105, 38, { align: 'center' });
+
+                // Línea separadora
+                doc.setDrawColor(...morado);
+                doc.setLineWidth(0.5);
+                doc.line(20, 42, 190, 42);
+
+                let y = 52;
+
+                // Saldos
+                doc.setFontSize(14);
+                doc.setTextColor(...morado);
+                doc.setFont(undefined, 'bold');
+                doc.text('Resumen', 20, y);
+                y += 10;
+
+                doc.setFontSize(11);
+                doc.setTextColor(...negro);
+                doc.setFont(undefined, 'normal');
+                
+                const saldoSistema = parseFloat(arqueo.saldo_sistema) || 0;
+                const totalFisico = parseFloat(arqueo.total_fisico) || 0;
+                const diferencia = parseFloat(arqueo.diferencia) || 0;
+
+                doc.text(`Saldo en Sistema:`, 25, y);
+                doc.text(`${saldoSistema.toFixed(2)}`, 100, y);
+                y += 7;
+
+                doc.text(`Total Físico:`, 25, y);
+                doc.text(`${totalFisico.toFixed(2)}`, 100, y);
+                y += 7;
+
+                doc.setFont(undefined, 'bold');
+                doc.text(`Diferencia:`, 25, y);
+                if (Math.abs(diferencia) < 0.01) {
+                    doc.setTextColor(21, 87, 36); // Verde
+                } else if (diferencia > 0) {
+                    doc.setTextColor(21, 87, 36); // Verde
+                } else {
+                    doc.setTextColor(114, 28, 36); // Rojo
+                }
+                doc.text(`${diferencia.toFixed(2)}`, 100, y);
+                y += 12;
+
+                // Billetes
+                doc.setTextColor(...morado);
+                doc.setFont(undefined, 'bold');
+                doc.setFontSize(13);
+                doc.text('BILLETES', 20, y);
+                y += 8;
+
+                doc.setFontSize(10);
+                doc.setTextColor(...negro);
+                doc.setFont(undefined, 'normal');
+
+                const billetes = [
+                    { denom: '$1,000', cantidad: arqueo.billetes_1000, valor: 1000 },
+                    { denom: '$500', cantidad: arqueo.billetes_500, valor: 500 },
+                    { denom: '$200', cantidad: arqueo.billetes_200, valor: 200 },
+                    { denom: '$100', cantidad: arqueo.billetes_100, valor: 100 },
+                    { denom: '$50', cantidad: arqueo.billetes_50, valor: 50 },
+                    { denom: '$20', cantidad: arqueo.billetes_20, valor: 20 }
+                ];
+
+                billetes.forEach(b => {
+                    if (b.cantidad > 0) {
+                        const subtotal = b.cantidad * b.valor;
+                        doc.text(`${b.denom}`, 25, y);
+                        doc.text(`${b.cantidad} pzas`, 60, y);
+                        doc.text(`${subtotal.toFixed(2)}`, 100, y);
+                        y += 6;
+                    }
+                });
+
+                y += 5;
+
+                // Monedas
+                doc.setTextColor(...morado);
+                doc.setFont(undefined, 'bold');
+                doc.setFontSize(13);
+                doc.text('MONEDAS', 20, y);
+                y += 8;
+
+                doc.setFontSize(10);
+                doc.setTextColor(...negro);
+                doc.setFont(undefined, 'normal');
+
+                const monedas = [
+                    { denom: '$20', cantidad: arqueo.monedas_20, valor: 20 },
+                    { denom: '$10', cantidad: arqueo.monedas_10, valor: 10 },
+                    { denom: '$5', cantidad: arqueo.monedas_5, valor: 5 },
+                    { denom: '$2', cantidad: arqueo.monedas_2, valor: 2 },
+                    { denom: '$1', cantidad: arqueo.monedas_1, valor: 1 },
+                    { denom: '$0.50', cantidad: arqueo.monedas_050c, valor: 0.5 }
+                ];
+
+                monedas.forEach(m => {
+                    if (m.cantidad > 0) {
+                        const subtotal = m.cantidad * m.valor;
+                        doc.text(`${m.denom}`, 25, y);
+                        doc.text(`${m.cantidad} pzas`, 60, y);
+                        doc.text(`${subtotal.toFixed(2)}`, 100, y);
+                        y += 6;
+                    }
+                });
+
+                y += 8;
+
+                // Observaciones
+                if (arqueo.observaciones) {
+                    doc.setTextColor(...morado);
+                    doc.setFont(undefined, 'bold');
+                    doc.setFontSize(12);
+                    doc.text('Observaciones', 20, y);
+                    y += 8;
+
+                    doc.setFontSize(10);
+                    doc.setTextColor(...negro);
+                    doc.setFont(undefined, 'normal');
+                    
+                    const observacionesLines = doc.splitTextToSize(arqueo.observaciones, 170);
+                    observacionesLines.forEach(line => {
+                        doc.text(line, 25, y);
+                        y += 6;
+                    });
+                    
+                    y += 8;
+                }
+
+                // Verificar si necesitamos nueva página
+                if (y > 220) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                // Firmas
+                y = Math.max(y, 230);
+                
+                doc.setDrawColor(...gris);
+                doc.setLineWidth(0.3);
+
+                // Firma 1 - Revisó
+                doc.line(25, y, 85, y);
+                doc.setFontSize(10);
+                doc.setTextColor(...negro);
+                doc.setFont(undefined, 'bold');
+                doc.text('Revisó', 55, y + 6, { align: 'center' });
+                doc.setFont(undefined, 'normal');
+                doc.text('Nuria González Zúñiga', 55, y + 12, { align: 'center' });
+
+                // Firma 2 - Realizó
+                doc.line(105, y, 165, y);
+                doc.setFont(undefined, 'bold');
+                doc.text('Realizó', 135, y + 6, { align: 'center' });
+                doc.setFont(undefined, 'normal');
+                doc.text('María Fernanda Cruz Córdova', 135, y + 12, { align: 'center' });
+
+                // Guardar PDF
+                const nombreArchivo = `Arqueo_Caja_${fechaStr.replace(/\//g, '-').replace(/:/g, '-').replace(/ /g, '_')}.pdf`;
+                doc.save(nombreArchivo);
+
+            } catch (error) {
+                console.error('Error al generar PDF:', error);
+                alert('❌ Error al generar el PDF');
             }
         }
     </script>

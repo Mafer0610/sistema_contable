@@ -54,7 +54,7 @@
             <div class="header-content">
                 <h1>Sky Home S. A.</h1>
                 <div class="user-info">
-                    <span>Sistema Contable</span>
+                    <span>María Fernanda Cruz Córdova</span>
                 </div>
             </div>
         </header>
@@ -162,6 +162,7 @@
                 html += fila('Gastos de operación');
                 html += fila('Gastos de venta', '', '', formatMoney(estado.gastos_operacion.gastos_venta));
                 html += fila('Gastos de admon', '', '', formatMoney(estado.gastos_operacion.gastos_administracion));
+                html += fila('Gastos generales', '', '', formatMoney(estado.gastos_operacion.gastos_generales));
                 html += fila('Total gastos de operación', '', '', '', formatMoney(estado.gastos_operacion.total), 'fila-subtotal');
 
                 // UTILIDAD ANTES DE IMPUESTOS

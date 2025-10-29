@@ -410,6 +410,8 @@ app.get('/api/estado-resultados', async (req, res) => {
         let gastosCompra = 0, devCompras = 0, rebCompras = 0, descCompras = 0;
         let gastosVenta = 0, gastosAdmon = 0;
 
+        let gastosGenerales = 0;
+
         gastosData.forEach(cuenta => {
             const nombre = cuenta.nombre.toLowerCase();
             const debe = parseFloat(cuenta.total_debe);
@@ -428,6 +430,8 @@ app.get('/api/estado-resultados', async (req, res) => {
             } else if (cuenta.subtipo === 'operacion') {
                 if (nombre.includes('venta')) {
                     gastosVenta += debe;
+                } else if (nombre.includes('general')) {
+                    gastosGenerales += debe;
                 } else {
                     gastosAdmon += debe;
                 }
@@ -441,7 +445,7 @@ app.get('/api/estado-resultados', async (req, res) => {
         const totalMercancias = inventarioInicial + comprasNetas;
         const costoVentas = totalMercancias - inventarioFinal;
         const utilidadBruta = ventasNetas - costoVentas;
-        const totalGastosOperacion = gastosVenta + gastosAdmon;
+        const totalGastosOperacion = gastosVenta + gastosAdmon + gastosGenerales;
         const utilidadAntesImpuestos = utilidadBruta - totalGastosOperacion;
         const isr = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.30 : 0;
         const ptu = utilidadAntesImpuestos > 0 ? utilidadAntesImpuestos * 0.10 : 0;
@@ -473,6 +477,7 @@ app.get('/api/estado-resultados', async (req, res) => {
             gastos_operacion: {
                 gastos_venta: gastosVenta,
                 gastos_administracion: gastosAdmon,
+                gastos_generales: gastosGenerales,
                 total: totalGastosOperacion
             },
             utilidad_antes_impuestos: utilidadAntesImpuestos,
@@ -595,5 +600,4 @@ app.get('/panel', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log('📊 Sistema Contable - Sky Home S.A.\n');
 });
